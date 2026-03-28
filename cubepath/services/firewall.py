@@ -3,8 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from cubepath.models.firewall import (
-    CreateFirewallGroupRequest, FirewallGroup, UpdateFirewallGroupRequest,
-    VPSFirewallGroupsRequest, VPSFirewallGroupsResponse,
+    CreateFirewallGroupRequest,
+    FirewallGroup,
+    UpdateFirewallGroupRequest,
+    VPSFirewallGroupsRequest,
+    VPSFirewallGroupsResponse,
 )
 
 if TYPE_CHECKING:

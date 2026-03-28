@@ -4,9 +4,15 @@ from typing import TYPE_CHECKING, Any
 
 from cubepath.models.projects import ProjectResponse
 from cubepath.models.vps import (
-    VPS, CreateVPSBackupRequest, CreateVPSRequest, ISOListResponse,
-    TaskResponse, UpdateVPSBackupSettingsRequest, UpdateVPSRequest,
-    VPSBackup, VPSBackupSettings,
+    VPS,
+    CreateVPSBackupRequest,
+    CreateVPSRequest,
+    ISOListResponse,
+    TaskResponse,
+    UpdateVPSBackupSettingsRequest,
+    UpdateVPSRequest,
+    VPSBackup,
+    VPSBackupSettings,
 )
 
 if TYPE_CHECKING:

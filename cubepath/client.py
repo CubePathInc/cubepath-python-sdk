@@ -54,19 +54,19 @@ class CubePathClient:
             )
 
         # Lazy-init services
+        from cubepath.services.baremetal import BaremetalService
+        from cubepath.services.cdn import CDNService
+        from cubepath.services.ddos import DDoSService
+        from cubepath.services.dns import DNSService
+        from cubepath.services.firewall import FirewallService
+        from cubepath.services.floating_ips import FloatingIPService
+        from cubepath.services.kubernetes import KubernetesService
+        from cubepath.services.load_balancer import LoadBalancerService
+        from cubepath.services.networks import NetworkService
+        from cubepath.services.pricing import PricingService
         from cubepath.services.projects import ProjectService
         from cubepath.services.ssh_keys import SSHKeyService
         from cubepath.services.vps import VPSService
-        from cubepath.services.baremetal import BaremetalService
-        from cubepath.services.networks import NetworkService
-        from cubepath.services.floating_ips import FloatingIPService
-        from cubepath.services.firewall import FirewallService
-        from cubepath.services.dns import DNSService
-        from cubepath.services.load_balancer import LoadBalancerService
-        from cubepath.services.cdn import CDNService
-        from cubepath.services.kubernetes import KubernetesService
-        from cubepath.services.pricing import PricingService
-        from cubepath.services.ddos import DDoSService
 
         self.projects = ProjectService(self)
         self.ssh_keys = SSHKeyService(self)

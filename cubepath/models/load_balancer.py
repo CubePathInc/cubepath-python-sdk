@@ -124,7 +124,7 @@ class LoadBalancer:
             plan=data.get("plan"),
             plan_name=data.get("plan_name", ""),
             floating_ips=[LBFloatingIP.from_dict(ip) for ip in data.get("floating_ips", [])],
-            listeners=[LBListener.from_dict(l) for l in data.get("listeners", [])],
+            listeners=[LBListener.from_dict(li) for li in data.get("listeners", [])],
             listeners_count=data.get("listeners_count", 0),
             project_id=data.get("project_id", ""),
             created_at=data.get("created_at", ""),

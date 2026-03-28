@@ -45,7 +45,7 @@ class VPSPricing:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSPricing:
         return cls(
-            locations=[LocationPricing.from_dict(l) for l in data.get("locations", [])],
+            locations=[LocationPricing.from_dict(loc) for loc in data.get("locations", [])],
             templates=data.get("templates", []),
         )
 
@@ -91,7 +91,7 @@ class BaremetalPricing:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BaremetalPricing:
         return cls(
-            locations=[BaremetalLocationPricing.from_dict(l) for l in data.get("locations", [])],
+            locations=[BaremetalLocationPricing.from_dict(loc) for loc in data.get("locations", [])],
         )
 
 

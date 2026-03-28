@@ -3,9 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from cubepath.models.cdn import (
-    CDNMetricsParams, CDNOrigin, CDNPlan, CDNRule, CDNZone,
-    CreateCDNOriginRequest, CreateCDNRuleRequest, CreateCDNZoneRequest,
-    UpdateCDNOriginRequest, UpdateCDNRuleRequest, UpdateCDNZoneRequest,
+    CDNMetricsParams,
+    CDNOrigin,
+    CDNPlan,
+    CDNRule,
+    CDNZone,
+    CreateCDNOriginRequest,
+    CreateCDNRuleRequest,
+    CreateCDNZoneRequest,
+    UpdateCDNOriginRequest,
+    UpdateCDNRuleRequest,
+    UpdateCDNZoneRequest,
 )
 
 if TYPE_CHECKING:

@@ -3,9 +3,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from cubepath.models.load_balancer import (
-    AddTargetRequest, CreateListenerRequest, CreateLoadBalancerRequest,
-    HealthCheckConfig, LBListener, LBLocationPlans, LBTarget,
-    LoadBalancer, UpdateListenerRequest, UpdateLoadBalancerRequest,
+    AddTargetRequest,
+    CreateListenerRequest,
+    CreateLoadBalancerRequest,
+    HealthCheckConfig,
+    LBListener,
+    LBLocationPlans,
+    LBTarget,
+    LoadBalancer,
+    UpdateListenerRequest,
+    UpdateLoadBalancerRequest,
     UpdateTargetRequest,
 )
 

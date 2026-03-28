@@ -3,9 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from cubepath.models.dns import (
-    CreateDNSRecordRequest, CreateDNSZoneRequest, DNSRecord, DNSZone,
-    SOARecord, UpdateDNSRecordRequest, UpdateSOARequest,
-    ZoneScanResponse, ZoneVerifyResponse,
+    CreateDNSRecordRequest,
+    CreateDNSZoneRequest,
+    DNSRecord,
+    DNSZone,
+    SOARecord,
+    UpdateDNSRecordRequest,
+    UpdateSOARequest,
+    ZoneScanResponse,
+    ZoneVerifyResponse,
 )
 
 if TYPE_CHECKING:
