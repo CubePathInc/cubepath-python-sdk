@@ -100,9 +100,9 @@ class CubePathClient:
         self._last_request_time = time.monotonic()
 
     def _backoff(self, attempt: int) -> float:
-        wait = self._retry_wait_min * (2**attempt)
+        wait: float = self._retry_wait_min * (2**attempt)
         wait = min(wait, self._retry_wait_max)
-        jitter = random.uniform(0, wait * 0.5)  # noqa: S311
+        jitter: float = random.uniform(0, wait * 0.5)  # noqa: S311
         return wait + jitter
 
     @staticmethod
@@ -190,7 +190,8 @@ class CubePathClient:
         return self.request("DELETE", path, params=params)
 
     def get_raw(self, path: str, *, params: dict[str, Any] | None = None) -> bytes:
-        return self.request("GET", path, params=params, raw=True)  # type: ignore[return-value]
+        result: bytes = self.request("GET", path, params=params, raw=True)
+        return result
 
     def close(self) -> None:
         self._http.close()

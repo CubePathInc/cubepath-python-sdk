@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, Any
 
 from cubepath.models.load_balancer import (
@@ -48,8 +49,8 @@ class LoadBalancerService:
     def resize(self, lb_uuid: str, plan_name: str) -> None:
         self._client.post(f"/loadbalancer/{lb_uuid}/resize", json={"plan_name": plan_name})
 
-    def list_plans(self) -> list[LBLocationPlans]:
-        data: list[dict[str, Any]] = self._client.get("/loadbalancer/plans")
+    def list_plans(self) -> builtins.list[LBLocationPlans]:
+        data = self._client.get("/loadbalancer/plans")
         return [LBLocationPlans.from_dict(lp) for lp in data]
 
     # ── Listeners ────────────────────────────────────────────────

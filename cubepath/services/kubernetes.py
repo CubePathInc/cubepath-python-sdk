@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, Any
 
 from cubepath.models.kubernetes import (
@@ -62,14 +63,14 @@ class KubernetesService:
     def move(self, cluster_uuid: str, project_id: str) -> None:
         self._client.post(f"/kubernetes/{cluster_uuid}/move", json={"project_id": project_id})
 
-    def list_load_balancers(self, cluster_uuid: str) -> list[KubernetesLB]:
-        data: list[dict[str, Any]] = self._client.get(f"/kubernetes/{cluster_uuid}/loadbalancers")
+    def list_load_balancers(self, cluster_uuid: str) -> builtins.list[KubernetesLB]:
+        data = self._client.get(f"/kubernetes/{cluster_uuid}/loadbalancers")
         return [KubernetesLB.from_dict(lb) for lb in data]
 
     # ── Node Pools ───────────────────────────────────────────────
 
-    def list_node_pools(self, cluster_uuid: str) -> list[NodePool]:
-        data: list[dict[str, Any]] = self._client.get(f"/kubernetes/{cluster_uuid}/node-pools/")
+    def list_node_pools(self, cluster_uuid: str) -> builtins.list[NodePool]:
+        data = self._client.get(f"/kubernetes/{cluster_uuid}/node-pools/")
         return [NodePool.from_dict(np) for np in data]
 
     def create_node_pool(self, cluster_uuid: str, req: CreateNodePoolRequest) -> NodePoolResponse:
@@ -96,16 +97,16 @@ class KubernetesService:
 
     # ── Addons ───────────────────────────────────────────────────
 
-    def list_available_addons(self) -> list[KubernetesAddon]:
-        data: list[dict[str, Any]] = self._client.get("/kubernetes/addons")
+    def list_available_addons(self) -> builtins.list[KubernetesAddon]:
+        data = self._client.get("/kubernetes/addons")
         return [KubernetesAddon.from_dict(a) for a in data]
 
     def get_addon(self, slug: str) -> KubernetesAddon:
         data: dict[str, Any] = self._client.get(f"/kubernetes/addons/{slug}")
         return KubernetesAddon.from_dict(data)
 
-    def list_installed_addons(self, cluster_uuid: str) -> list[InstalledAddon]:
-        data: list[dict[str, Any]] = self._client.get(f"/kubernetes/{cluster_uuid}/addons")
+    def list_installed_addons(self, cluster_uuid: str) -> builtins.list[InstalledAddon]:
+        data = self._client.get(f"/kubernetes/{cluster_uuid}/addons")
         return [InstalledAddon.from_dict(a) for a in data]
 
     def install_addon(self, cluster_uuid: str, slug: str, req: InstallAddonRequest | None = None) -> None:
