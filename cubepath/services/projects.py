@@ -26,6 +26,7 @@ class ProjectService:
             if p.project.id == project_id:
                 return p
         from cubepath.exceptions import APIError
+
         raise APIError(404, "Not Found", f"project {project_id} not found")
 
     def delete(self, project_id: str) -> None:

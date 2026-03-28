@@ -4,10 +4,15 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
-    "DNSZone", "DNSRecord", "SOARecord",
-    "ZoneVerifyResponse", "ZoneScanResponse",
-    "CreateDNSZoneRequest", "CreateDNSRecordRequest",
-    "UpdateDNSRecordRequest", "UpdateSOARequest",
+    "DNSZone",
+    "DNSRecord",
+    "SOARecord",
+    "ZoneVerifyResponse",
+    "ZoneScanResponse",
+    "CreateDNSZoneRequest",
+    "CreateDNSRecordRequest",
+    "UpdateDNSRecordRequest",
+    "UpdateSOARequest",
 ]
 
 
@@ -23,7 +28,7 @@ class DNSZone:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DNSZone:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -69,7 +74,7 @@ class SOARecord:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SOARecord:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -80,7 +85,7 @@ class ZoneVerifyResponse:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ZoneVerifyResponse:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass

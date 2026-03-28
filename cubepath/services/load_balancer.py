@@ -78,7 +78,11 @@ class LoadBalancerService:
         return LBTarget.from_dict(data)
 
     def update_target(
-        self, lb_uuid: str, listener_uuid: str, target_uuid: str, req: UpdateTargetRequest,
+        self,
+        lb_uuid: str,
+        listener_uuid: str,
+        target_uuid: str,
+        req: UpdateTargetRequest,
     ) -> LBTarget:
         data: dict[str, Any] = self._client.patch(
             f"/loadbalancer/{lb_uuid}/listeners/{listener_uuid}/targets/{target_uuid}",

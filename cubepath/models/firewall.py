@@ -4,9 +4,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
-    "FirewallGroup", "FirewallRule",
-    "CreateFirewallGroupRequest", "UpdateFirewallGroupRequest",
-    "VPSFirewallGroupsRequest", "VPSFirewallGroupsResponse",
+    "FirewallGroup",
+    "FirewallRule",
+    "CreateFirewallGroupRequest",
+    "UpdateFirewallGroupRequest",
+    "VPSFirewallGroupsRequest",
+    "VPSFirewallGroupsResponse",
 ]
 
 
@@ -20,7 +23,7 @@ class FirewallRule:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FirewallRule:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"direction": self.direction, "protocol": self.protocol}
@@ -102,4 +105,4 @@ class VPSFirewallGroupsResponse:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSFirewallGroupsResponse:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})

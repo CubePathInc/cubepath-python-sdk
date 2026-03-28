@@ -4,11 +4,19 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
-    "LoadBalancer", "LBPlan", "LBFloatingIP", "LBListener", "LBTarget",
-    "LBLocationPlans", "HealthCheckConfig",
-    "CreateLoadBalancerRequest", "UpdateLoadBalancerRequest",
-    "CreateListenerRequest", "UpdateListenerRequest",
-    "AddTargetRequest", "UpdateTargetRequest",
+    "LoadBalancer",
+    "LBPlan",
+    "LBFloatingIP",
+    "LBListener",
+    "LBTarget",
+    "LBLocationPlans",
+    "HealthCheckConfig",
+    "CreateLoadBalancerRequest",
+    "UpdateLoadBalancerRequest",
+    "CreateListenerRequest",
+    "UpdateListenerRequest",
+    "AddTargetRequest",
+    "UpdateTargetRequest",
 ]
 
 
@@ -19,7 +27,7 @@ class LBFloatingIP:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> LBFloatingIP:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -34,7 +42,7 @@ class HealthCheckConfig:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> HealthCheckConfig:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -62,7 +70,7 @@ class LBTarget:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> LBTarget:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -142,7 +150,7 @@ class LBPlan:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> LBPlan:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass

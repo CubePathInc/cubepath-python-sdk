@@ -100,7 +100,7 @@ class CubePathClient:
         self._last_request_time = time.monotonic()
 
     def _backoff(self, attempt: int) -> float:
-        wait = self._retry_wait_min * (2 ** attempt)
+        wait = self._retry_wait_min * (2**attempt)
         wait = min(wait, self._retry_wait_max)
         jitter = random.uniform(0, wait * 0.5)  # noqa: S311
         return wait + jitter

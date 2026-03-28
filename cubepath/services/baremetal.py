@@ -38,6 +38,7 @@ class BaremetalService:
                 if bm.get("id") == baremetal_id:
                     return Baremetal.from_dict(bm)
         from cubepath.exceptions import APIError
+
         raise APIError(404, "Not Found", f"baremetal {baremetal_id} not found")
 
     def update(self, baremetal_id: str, req: UpdateBaremetalRequest) -> None:

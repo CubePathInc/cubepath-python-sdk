@@ -4,10 +4,17 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
-    "CDNZone", "CDNOrigin", "CDNRule", "CDNPlan", "CDNMetricsParams",
-    "CreateCDNZoneRequest", "UpdateCDNZoneRequest",
-    "CreateCDNOriginRequest", "UpdateCDNOriginRequest",
-    "CreateCDNRuleRequest", "UpdateCDNRuleRequest",
+    "CDNZone",
+    "CDNOrigin",
+    "CDNRule",
+    "CDNPlan",
+    "CDNMetricsParams",
+    "CreateCDNZoneRequest",
+    "UpdateCDNZoneRequest",
+    "CreateCDNOriginRequest",
+    "UpdateCDNOriginRequest",
+    "CreateCDNRuleRequest",
+    "UpdateCDNRuleRequest",
 ]
 
 
@@ -33,7 +40,7 @@ class CDNOrigin:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CDNOrigin:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -51,7 +58,7 @@ class CDNRule:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CDNRule:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -101,7 +108,7 @@ class CDNPlan:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CDNPlan:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass

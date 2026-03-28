@@ -4,14 +4,27 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
-    "KubernetesVersion", "KubernetesPlan", "KubernetesCluster",
-    "KubernetesLocation", "KubernetesNetwork",
-    "NodePool", "NodePoolPlan", "Node", "NodeTaint",
-    "KubernetesAddon", "InstalledAddon", "KubernetesLB",
-    "KubernetesClusterResponse", "NodePoolResponse",
-    "CreateKubernetesClusterRequest", "CreateNodePoolConfig", "ClusterNetworkConfig",
+    "KubernetesVersion",
+    "KubernetesPlan",
+    "KubernetesCluster",
+    "KubernetesLocation",
+    "KubernetesNetwork",
+    "NodePool",
+    "NodePoolPlan",
+    "Node",
+    "NodeTaint",
+    "KubernetesAddon",
+    "InstalledAddon",
+    "KubernetesLB",
+    "KubernetesClusterResponse",
+    "NodePoolResponse",
+    "CreateKubernetesClusterRequest",
+    "CreateNodePoolConfig",
+    "ClusterNetworkConfig",
     "UpdateKubernetesClusterRequest",
-    "CreateNodePoolRequest", "UpdateNodePoolRequest", "InstallAddonRequest",
+    "CreateNodePoolRequest",
+    "UpdateNodePoolRequest",
+    "InstallAddonRequest",
 ]
 
 
@@ -24,7 +37,7 @@ class KubernetesVersion:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> KubernetesVersion:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -38,7 +51,7 @@ class KubernetesPlan:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> KubernetesPlan:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -48,7 +61,7 @@ class KubernetesLocation:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> KubernetesLocation:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -59,7 +72,7 @@ class KubernetesNetwork:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> KubernetesNetwork:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -81,7 +94,7 @@ class Node:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Node:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -168,7 +181,7 @@ class KubernetesAddon:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> KubernetesAddon:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -181,7 +194,7 @@ class InstalledAddon:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> InstalledAddon:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -193,7 +206,7 @@ class KubernetesLB:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> KubernetesLB:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -203,7 +216,7 @@ class KubernetesClusterResponse:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> KubernetesClusterResponse:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -213,7 +226,7 @@ class NodePoolResponse:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> NodePoolResponse:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 # ── Requests ─────────────────────────────────────────────────────

@@ -19,4 +19,4 @@ class DDoSAttack:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DDoSAttack:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})

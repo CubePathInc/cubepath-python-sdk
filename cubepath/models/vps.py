@@ -4,11 +4,20 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
-    "VPS", "VPSPlan", "VPSTemplate", "Location", "NetworkInfo",
-    "TaskResponse", "CreateVPSRequest", "UpdateVPSRequest",
-    "VPSBackup", "VPSBackupSettings", "CreateVPSBackupRequest",
+    "VPS",
+    "VPSPlan",
+    "VPSTemplate",
+    "Location",
+    "NetworkInfo",
+    "TaskResponse",
+    "CreateVPSRequest",
+    "UpdateVPSRequest",
+    "VPSBackup",
+    "VPSBackupSettings",
+    "CreateVPSBackupRequest",
     "UpdateVPSBackupSettingsRequest",
-    "ISO", "ISOListResponse",
+    "ISO",
+    "ISOListResponse",
 ]
 
 
@@ -24,7 +33,7 @@ class VPSPlan:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSPlan:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -36,7 +45,7 @@ class VPSTemplate:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSTemplate:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -47,7 +56,7 @@ class Location:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Location:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -58,7 +67,7 @@ class NetworkInfo:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> NetworkInfo:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -69,7 +78,7 @@ class TaskResponse:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> TaskResponse:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -187,7 +196,7 @@ class VPSBackup:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSBackup:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -199,7 +208,7 @@ class VPSBackupSettings:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSBackupSettings:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -241,7 +250,7 @@ class ISO:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ISO:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass

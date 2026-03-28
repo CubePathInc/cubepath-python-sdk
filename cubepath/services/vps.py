@@ -86,6 +86,7 @@ class VPSService:
                 if v.get("id") == vps_id:
                     return VPS.from_dict(v)
         from cubepath.exceptions import APIError
+
         raise APIError(404, "Not Found", f"vps {vps_id} not found")
 
     def destroy(self, vps_id: str, release_ips: bool = False) -> None:

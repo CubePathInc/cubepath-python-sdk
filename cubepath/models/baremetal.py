@@ -4,9 +4,18 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
-    "Baremetal", "BaremetalModel", "OSInfo", "SSHKeyRef",
-    "CreateBaremetalRequest", "UpdateBaremetalRequest", "ReinstallBaremetalRequest",
-    "RescueResponse", "BMCSensors", "SensorReading", "IPMISession", "ReinstallStatus",
+    "Baremetal",
+    "BaremetalModel",
+    "OSInfo",
+    "SSHKeyRef",
+    "CreateBaremetalRequest",
+    "UpdateBaremetalRequest",
+    "ReinstallBaremetalRequest",
+    "RescueResponse",
+    "BMCSensors",
+    "SensorReading",
+    "IPMISession",
+    "ReinstallStatus",
 ]
 
 
@@ -30,7 +39,7 @@ class BaremetalModel:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BaremetalModel:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -41,7 +50,7 @@ class OSInfo:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> OSInfo:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -169,7 +178,7 @@ class RescueResponse:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RescueResponse:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -179,7 +188,7 @@ class SensorReading:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SensorReading:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
 
 
 @dataclass
@@ -224,4 +233,4 @@ class ReinstallStatus:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ReinstallStatus:
-        return cls(**{k: data.get(k, v) for k, v in cls.__dataclass_fields__.items()})
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
