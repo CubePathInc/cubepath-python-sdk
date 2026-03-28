@@ -32,6 +32,9 @@ Homepage = "https://github.com/CubePathInc/cubepath-python-sdk"
 Documentation = "https://github.com/CubePathInc/cubepath-python-sdk"
 Repository = "https://github.com/CubePathInc/cubepath-python-sdk"
 
+[tool.hatch.build.targets.wheel]
+packages = ["cubepath"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 120
