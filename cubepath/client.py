@@ -17,6 +17,9 @@ DEFAULT_RETRY_WAIT_MAX = 30.0
 DEFAULT_RATE_LIMIT_INTERVAL = 0.1  # 10 req/s
 
 
+DEFAULT_AI_GATEWAY_BASE_URL = "https://ai-gateway.cubepath.com"
+
+
 class CubePathClient:
     """CubePath API client — Python equivalent of the Go SDK."""
 
@@ -25,6 +28,7 @@ class CubePathClient:
         api_token: str,
         *,
         base_url: str = DEFAULT_BASE_URL,
+        ai_gateway_base_url: str = DEFAULT_AI_GATEWAY_BASE_URL,
         timeout: float = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
         retry_wait_min: float = DEFAULT_RETRY_WAIT_MIN,
@@ -66,6 +70,7 @@ class CubePathClient:
         from cubepath.services.pricing import PricingService
         from cubepath.services.projects import ProjectService
         from cubepath.services.ssh_keys import SSHKeyService
+        from cubepath.services.ai_gateway import AIGatewayService
         from cubepath.services.vps import VPSService
 
         self.projects = ProjectService(self)
@@ -81,6 +86,7 @@ class CubePathClient:
         self.kubernetes = KubernetesService(self)
         self.pricing = PricingService(self)
         self.ddos = DDoSService(self)
+        self.ai_gateway = AIGatewayService(self, base_url=ai_gateway_base_url)
 
     # ── HTTP helpers ──────────────────────────────────────────────
 
