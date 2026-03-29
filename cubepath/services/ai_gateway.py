@@ -53,7 +53,7 @@ class ChatCompletionStream:
             if not line.startswith("data: "):
                 continue
 
-            data = line[len("data: "):]
+            data = line[len("data: ") :]
 
             if data == "[DONE]":
                 self._done = True
