@@ -7,6 +7,8 @@ __all__ = [
     "VPS",
     "VPSPlan",
     "VPSTemplate",
+    "VPSAppTemplate",
+    "VPSTemplatesResponse",
     "Location",
     "NetworkInfo",
     "TaskResponse",
@@ -46,6 +48,34 @@ class VPSTemplate:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSTemplate:
         return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class VPSAppTemplate:
+    app_name: str = ""
+    version: str = ""
+    recommended_plan: str = ""
+    app_docs: str = ""
+    app_wiki: str = ""
+    license_type: str = ""
+    description: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> VPSAppTemplate:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class VPSTemplatesResponse:
+    operating_systems: list[VPSTemplate] = field(default_factory=list)
+    applications: list[VPSAppTemplate] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> VPSTemplatesResponse:
+        return cls(
+            operating_systems=[VPSTemplate.from_dict(t) for t in data.get("operating_systems", [])],
+            applications=[VPSAppTemplate.from_dict(a) for a in data.get("applications", [])],
+        )
 
 
 @dataclass

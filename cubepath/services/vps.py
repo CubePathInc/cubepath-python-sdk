@@ -13,6 +13,7 @@ from cubepath.models.vps import (
     UpdateVPSRequest,
     VPSBackup,
     VPSBackupSettings,
+    VPSTemplatesResponse,
 )
 
 if TYPE_CHECKING:
@@ -107,3 +108,7 @@ class VPSService:
 
     def power(self, vps_id: str, action: str) -> None:
         self._client.post(f"/vps/{vps_id}/power/{action}")
+
+    def templates(self) -> VPSTemplatesResponse:
+        data: dict[str, Any] = self._client.get("/vps/templates")
+        return VPSTemplatesResponse.from_dict(data)
