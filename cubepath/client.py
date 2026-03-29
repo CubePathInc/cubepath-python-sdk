@@ -9,7 +9,7 @@ import httpx
 from cubepath.exceptions import APIError
 
 DEFAULT_BASE_URL = "https://api.cubepath.com"
-SDK_VERSION = "0.1.0"
+SDK_VERSION = "0.2.0"
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_RETRY_WAIT_MIN = 1.0
