@@ -58,6 +58,7 @@ class CubePathClient:
             )
 
         # Lazy-init services
+        from cubepath.services.ai_gateway import AIGatewayService
         from cubepath.services.baremetal import BaremetalService
         from cubepath.services.cdn import CDNService
         from cubepath.services.ddos import DDoSService
@@ -70,7 +71,6 @@ class CubePathClient:
         from cubepath.services.pricing import PricingService
         from cubepath.services.projects import ProjectService
         from cubepath.services.ssh_keys import SSHKeyService
-        from cubepath.services.ai_gateway import AIGatewayService
         from cubepath.services.vps import VPSService
 
         self.projects = ProjectService(self)
