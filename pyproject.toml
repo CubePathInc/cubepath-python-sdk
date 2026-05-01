@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cubepath-sdk"
-version = "0.2.1"
+version = "0.3.0"
 description = "CubePath Cloud API Python SDK"
 readme = "README.md"
 license = "MIT"

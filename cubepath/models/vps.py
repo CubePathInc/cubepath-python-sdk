@@ -158,7 +158,7 @@ class CreateVPSRequest:
     location_name: str
     label: str = ""
     network_id: str = ""
-    ssh_key_names: list[str] = field(default_factory=list)
+    ssh_key_ids: list[int] = field(default_factory=list)
     user: str = ""
     password: str = ""
     ipv4: bool = False
@@ -178,8 +178,8 @@ class CreateVPSRequest:
             d["label"] = self.label
         if self.network_id:
             d["network_id"] = self.network_id
-        if self.ssh_key_names:
-            d["ssh_key_names"] = self.ssh_key_names
+        if self.ssh_key_ids:
+            d["ssh_key_ids"] = self.ssh_key_ids
         if self.user:
             d["user"] = self.user
         if self.password:

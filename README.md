@@ -28,7 +28,7 @@ req = CreateVPSRequest(
     plan_name="gp.nano",
     template_name="debian-12",
     location_name="us-mia-1",
-    ssh_key_names=["my-key"],
+    ssh_key_ids=[12],
 )
 task = client.vps.create(project_id="proj-123", req=req)
 print(f"Task: {task.task_id}")
@@ -109,7 +109,7 @@ req = CreateBaremetalRequest(
     hostname="db-server",
     password="SecurePass123!",
     os_name="debian-12",
-    ssh_key_names=["my-key"],
+    ssh_key_ids=[12],
 )
 task = client.baremetal.deploy(project_id="proj-123", req=req)
 ```

@@ -107,7 +107,7 @@ class CreateBaremetalRequest:
     password: str
     label: str = ""
     user: str = ""
-    ssh_key_names: list[str] = field(default_factory=list)
+    ssh_key_ids: list[int] = field(default_factory=list)
     os_name: str = ""
     disk_layout_name: str = ""
 
@@ -122,8 +122,8 @@ class CreateBaremetalRequest:
             d["label"] = self.label
         if self.user:
             d["user"] = self.user
-        if self.ssh_key_names:
-            d["ssh_key_names"] = self.ssh_key_names
+        if self.ssh_key_ids:
+            d["ssh_key_ids"] = self.ssh_key_ids
         if self.os_name:
             d["os_name"] = self.os_name
         if self.disk_layout_name:
@@ -155,7 +155,7 @@ class ReinstallBaremetalRequest:
     disk_layout_name: str = ""
     user: str = ""
     hostname: str = ""
-    ssh_key_names: list[str] = field(default_factory=list)
+    ssh_key_ids: list[int] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"os_name": self.os_name, "password": self.password}
@@ -165,8 +165,8 @@ class ReinstallBaremetalRequest:
             d["user"] = self.user
         if self.hostname:
             d["hostname"] = self.hostname
-        if self.ssh_key_names:
-            d["ssh_key_names"] = self.ssh_key_names
+        if self.ssh_key_ids:
+            d["ssh_key_ids"] = self.ssh_key_ids
         return d
 
 
