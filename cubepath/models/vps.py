@@ -162,6 +162,7 @@ class CreateVPSRequest:
     user: str = ""
     password: str = ""
     ipv4: bool = False
+    ipv6: bool = True
     enable_backups: bool = False
     custom_cloudinit: str = ""
     firewall_group_ids: list[str] = field(default_factory=list)
@@ -186,6 +187,7 @@ class CreateVPSRequest:
             d["password"] = self.password
         if self.ipv4:
             d["ipv4"] = self.ipv4
+        d["ipv6"] = self.ipv6
         if self.enable_backups:
             d["enable_backups"] = self.enable_backups
         if self.custom_cloudinit:
