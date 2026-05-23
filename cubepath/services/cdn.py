@@ -127,3 +127,21 @@ class CDNService:
             f"/cdn/zones/{zone_uuid}/metrics/{metric_type}",
             params=params.to_params() if params else None,
         )
+
+    # ── Actions ──────────────────────────────────────────────────
+
+    def request_ssl(self, zone_uuid: str) -> Any:
+        """Re-trigger automatic SSL issuance for the zone's current custom_domain.
+
+        Use after fixing a missing/incorrect CNAME — the PATCH zone flow only
+        queues a cert task when custom_domain changes, so this is the way to
+        retry without resetting the field.
+        """
+        return self._client.post(f"/cdn/zones/{zone_uuid}/request-ssl")
+
+    def move_zone_to_project(self, zone_uuid: str, project_id: int) -> Any:
+        """Reassign a CDN zone to a different project in the same organization."""
+        return self._client.post(
+            f"/cdn/zones/{zone_uuid}/move-project",
+            json={"project_id": project_id},
+        )
