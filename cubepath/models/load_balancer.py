@@ -178,6 +178,7 @@ class CreateLoadBalancerRequest:
     location_name: str
     project_id: str = ""
     label: str = ""
+    network_id: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -189,6 +190,8 @@ class CreateLoadBalancerRequest:
             d["project_id"] = self.project_id
         if self.label:
             d["label"] = self.label
+        if self.network_id is not None:
+            d["network_id"] = self.network_id
         return d
 
 

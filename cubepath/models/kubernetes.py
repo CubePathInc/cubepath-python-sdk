@@ -281,6 +281,8 @@ class CreateKubernetesClusterRequest:
     node_pools: list[CreateNodePoolConfig]
     version: str = ""
     network: ClusterNetworkConfig | None = None
+    allocate_ipv4: bool = True
+    allocate_ipv6: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -294,6 +296,8 @@ class CreateKubernetesClusterRequest:
             d["version"] = self.version
         if self.network:
             d["network"] = self.network.to_dict()
+        d["allocate_ipv4"] = self.allocate_ipv4
+        d["allocate_ipv6"] = self.allocate_ipv6
         return d
 
 

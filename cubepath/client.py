@@ -67,6 +67,7 @@ class CubePathClient:
         from cubepath.services.floating_ips import FloatingIPService
         from cubepath.services.kubernetes import KubernetesService
         from cubepath.services.load_balancer import LoadBalancerService
+        from cubepath.services.nat_gateway import NATGatewayService
         from cubepath.services.networks import NetworkService
         from cubepath.services.pricing import PricingService
         from cubepath.services.projects import ProjectService
@@ -82,6 +83,7 @@ class CubePathClient:
         self.firewall = FirewallService(self)
         self.dns = DNSService(self)
         self.load_balancer = LoadBalancerService(self)
+        self.nat_gateway = NATGatewayService(self)
         self.cdn = CDNService(self)
         self.kubernetes = KubernetesService(self)
         self.pricing = PricingService(self)

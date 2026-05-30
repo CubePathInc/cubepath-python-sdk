@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, Any
 
-from cubepath.models.networks import CreateNetworkRequest, Network, UpdateNetworkRequest
+from cubepath.models.networks import (
+    CreateNetworkRequest,
+    CreateNetworkRouteRequest,
+    Network,
+    NetworkRoute,
+    UpdateNetworkRequest,
+)
 from cubepath.models.projects import ProjectResponse
 
 if TYPE_CHECKING:
@@ -26,3 +33,14 @@ class NetworkService:
 
     def delete(self, network_id: str) -> None:
         self._client.delete(f"/networks/{network_id}")
+
+    def list_routes(self, network_id: str) -> builtins.list[NetworkRoute]:
+        data: list[dict[str, Any]] = self._client.get(f"/networks/{network_id}/routes")
+        return [NetworkRoute.from_dict(r) for r in data]
+
+    def create_route(self, network_id: str, req: CreateNetworkRouteRequest) -> NetworkRoute:
+        data: dict[str, Any] = self._client.post(f"/networks/{network_id}/routes", json=req.to_dict())
+        return NetworkRoute.from_dict(data)
+
+    def delete_route(self, network_id: str, route_id: str) -> None:
+        self._client.delete(f"/networks/{network_id}/routes/{route_id}")
