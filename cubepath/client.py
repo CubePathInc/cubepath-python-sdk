@@ -9,7 +9,7 @@ import httpx
 from cubepath.exceptions import APIError
 
 DEFAULT_BASE_URL = "https://api.cubepath.com"
-SDK_VERSION = "0.5.0"
+SDK_VERSION = "0.5.1"
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_RETRY_WAIT_MIN = 1.0
@@ -190,14 +190,40 @@ class CubePathClient:
     def post(self, path: str, *, json: Any | None = None, params: dict[str, Any] | None = None) -> Any:
         return self.request("POST", path, json=json, params=params)
 
-    def put(self, path: str, *, json: Any | None = None) -> Any:
-        return self.request("PUT", path, json=json)
+    def put(self, path: str, *, json: Any | None = None, params: dict[str, Any] | None = None) -> Any:
+        return self.request("PUT", path, json=json, params=params)
 
     def patch(self, path: str, *, json: Any | None = None) -> Any:
         return self.request("PATCH", path, json=json)
 
     def delete(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
         return self.request("DELETE", path, params=params)
+
+    def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Run a query against POST /graphql and return its ``data``.
+
+        Metrics (baremetal, NAT gateways...) are only served through GraphQL. A GraphQL error
+        is raised as an :class:`APIError`; ``NOT_FOUND`` maps to 404.
+        """
+        body: dict[str, Any] = {"query": query}
+        if variables:
+            body["variables"] = variables
+        result: dict[str, Any] = self.post("/graphql", json=body) or {}
+        errors = result.get("errors") or []
+        if errors:
+            codes = {(e.get("extensions") or {}).get("code") for e in errors}
+            status = (
+                404
+                if "NOT_FOUND" in codes
+                else 403
+                if "FORBIDDEN" in codes
+                else 401
+                if "UNAUTHENTICATED" in codes
+                else 400
+            )
+            raise APIError(status, "GraphQL error", "; ".join(str(e.get("message", "")) for e in errors))
+        data: dict[str, Any] = result.get("data") or {}
+        return data
 
     def get_raw(self, path: str, *, params: dict[str, Any] | None = None) -> bytes:
         result: bytes = self.request("GET", path, params=params, raw=True)

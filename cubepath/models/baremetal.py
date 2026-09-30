@@ -184,7 +184,9 @@ class RescueResponse:
 @dataclass
 class SensorReading:
     name: str = ""
-    value: str = ""
+    value: float = 0.0
+    # CELSIUS for temperatures, RPM for fans.
+    unit: str = ""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SensorReading:
@@ -193,10 +195,14 @@ class SensorReading:
 
 @dataclass
 class BMCSensors:
+    # Deprecated: no longer returned by the API; always empty.
     node: str = ""
+    # False when the BMC has not been polled recently (see last_seen).
     ipmi_available: bool = False
     power_on: bool = False
     sensors: dict[str, list[SensorReading]] = field(default_factory=dict)
+    # Unix time of the last BMC poll, None when never polled.
+    last_seen: int | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BMCSensors:
@@ -209,6 +215,7 @@ class BMCSensors:
             ipmi_available=data.get("ipmi_available", False),
             power_on=data.get("power_on", False),
             sensors=sensors,
+            last_seen=data.get("last_seen"),
         )
 
 
@@ -229,6 +236,7 @@ class IPMISession:
 class ReinstallStatus:
     is_reinstalling: bool = False
     status: str = ""
+    # Deprecated: no longer available; always empty.
     os_name: str = ""
 
     @classmethod

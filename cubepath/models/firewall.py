@@ -62,6 +62,8 @@ class CreateFirewallGroupRequest:
     name: str
     rules: list[FirewallRule] = field(default_factory=list)
     enabled: bool = True
+    # Project the group belongs to. Required by the API; sent as a query parameter.
+    project_id: int | str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -98,6 +100,8 @@ class VPSFirewallGroupsRequest:
 
 @dataclass
 class VPSFirewallGroupsResponse:
+    detail: str = ""
+    # Deprecated: the API returns ``detail``; kept for compatibility, always empty.
     message: str = ""
     vps_id: str = ""
     firewall_groups: list[Any] = field(default_factory=list)

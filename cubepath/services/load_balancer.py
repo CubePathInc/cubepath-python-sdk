@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 from typing import TYPE_CHECKING, Any
 
+from cubepath.exceptions import APIError
 from cubepath.models.load_balancer import (
     AddTargetRequest,
     CreateListenerRequest,
@@ -32,8 +33,11 @@ class LoadBalancerService:
         return [LoadBalancer.from_dict(lb) for lb in data]
 
     def get(self, lb_uuid: str) -> LoadBalancer:
-        data: dict[str, Any] = self._client.get(f"/loadbalancer/{lb_uuid}")
-        return LoadBalancer.from_dict(data)
+        """The API has no single-item endpoint, so the balancer is looked up in the list."""
+        for lb in self.list():
+            if lb.uuid == lb_uuid:
+                return lb
+        raise APIError(404, "Not Found", f"load balancer {lb_uuid} not found")
 
     def create(self, req: CreateLoadBalancerRequest) -> LoadBalancer:
         data: dict[str, Any] = self._client.post("/loadbalancer/", json=req.to_dict())
