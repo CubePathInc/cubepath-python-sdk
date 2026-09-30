@@ -8,6 +8,7 @@ from cubepath.models.kubernetes import *  # noqa: F403
 from cubepath.models.load_balancer import *  # noqa: F403
 from cubepath.models.nat_gateway import *  # noqa: F403
 from cubepath.models.networks import *  # noqa: F403
+from cubepath.models.object_storage import *  # noqa: F403
 from cubepath.models.pricing import *  # noqa: F403
 from cubepath.models.projects import *  # noqa: F403
 from cubepath.models.ssh_keys import *  # noqa: F403

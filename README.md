@@ -50,6 +50,7 @@ print(f"Task: {task.task_id}")
 | DNS | `client.dns` | DNS zones & records |
 | Load Balancer | `client.load_balancer` | Load balancers, listeners, targets |
 | CDN | `client.cdn` | CDN zones, origins, rules, WAF |
+| Object Storage | `client.object_storage` | S3 compatible buckets, access keys, usage |
 | Kubernetes | `client.kubernetes` | K8s clusters, node pools, addons |
 | Pricing | `client.pricing` | Pricing information |
 | DDoS | `client.ddos` | DDoS attack reports |
@@ -154,6 +155,49 @@ client.cdn.create_origin(zone.uuid, CreateCDNOriginRequest(
     priority=1,
     health_check_path="/health",
 ))
+```
+
+### Object Storage
+
+Buckets and keys are created asynchronously: poll until `status` is `active`. Use any S3
+client (boto3, rclone, aws cli) with the key against the tier `endpoint`.
+
+```python
+from cubepath.models import (
+    CreateCDNOriginRequest,
+    CreateObjectStorageAccessKeyRequest,
+    CreateObjectStorageBucketRequest,
+    UpdateObjectStorageBucketRequest,
+)
+
+tiers = client.object_storage.list_tiers()
+
+bucket = client.object_storage.create_bucket(CreateObjectStorageBucketRequest(
+    name="my-backups",
+    tier="infrequent_access",
+    project_id=12,
+))
+detail = client.object_storage.get_bucket(bucket.uuid)  # connection info, month usage, CDN origin
+client.object_storage.update_bucket(bucket.uuid, UpdateObjectStorageBucketRequest(versioning="enabled"))
+
+# The secret is only returned here
+key = client.object_storage.create_key(CreateObjectStorageAccessKeyRequest(
+    name="backups",
+    tier="infrequent_access",
+    permission="read_write",
+    bucket_uuids=[bucket.uuid],  # omit for every bucket of the project
+))
+print(key.access_key_id, key.secret_access_key, key.endpoint, key.region)
+
+usage = client.object_storage.get_usage(period="2026-09")
+
+# Buckets are private: serve one publicly through a CDN zone
+client.cdn.create_origin(zone.uuid, CreateCDNOriginRequest(
+    name="my-bucket", weight=100, priority=1, object_storage_bucket_uuid=bucket.uuid,
+))
+
+client.object_storage.delete_key(key.uuid)
+client.object_storage.delete_bucket(bucket.uuid, force=True)  # force purges the content first
 ```
 
 ### DNS Management
