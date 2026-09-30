@@ -15,6 +15,10 @@ __all__ = [
     "UpdateCDNOriginRequest",
     "CreateCDNRuleRequest",
     "UpdateCDNRuleRequest",
+    "CDNPurge",
+    "CDNPurgePop",
+    "CDNPurgeStatus",
+    "CDNSignedURL",
 ]
 
 
@@ -77,6 +81,12 @@ class CDNZone:
     rules: list[CDNRule] = field(default_factory=list)
     created_at: str = ""
     updated_at: str = ""
+    token_auth_enabled: bool = False
+    token_auth_ip_binding: bool = False
+    token_auth_secret: str | None = None
+    """Only returned by the update that first enabled Token Auth."""
+    cors_enabled: bool = False
+    cors_allow_origins: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CDNZone:
@@ -93,6 +103,11 @@ class CDNZone:
             rules=[CDNRule.from_dict(r) for r in data.get("rules", [])],
             created_at=data.get("created_at", ""),
             updated_at=data.get("updated_at", ""),
+            token_auth_enabled=data.get("token_auth_enabled", False),
+            token_auth_ip_binding=data.get("token_auth_ip_binding", False),
+            token_auth_secret=data.get("token_auth_secret"),
+            cors_enabled=data.get("cors_enabled", False),
+            cors_allow_origins=data.get("cors_allow_origins"),
         )
 
 
@@ -115,10 +130,23 @@ class CDNPlan:
 
 @dataclass
 class CDNMetricsParams:
+    """Window and filters of the metrics endpoints; each endpoint ignores the ones it does not take."""
+
     minutes: int | None = None
+    """Window looking back, default 60."""
     interval_seconds: int | None = None
+    """Bucket size of the time series."""
     group_by: str = ""
+    """bandwidth only: time (default) or region."""
     limit: int | None = None
+    """top-* and file-extensions endpoints: number of rows, default 20."""
+    country: str = ""
+    asn: str = ""
+    status_range: str = ""
+    status: str = ""
+    cache_status: str = ""
+    device_type: str = ""
+    path_prefix: str = ""
 
     def to_params(self) -> dict[str, Any]:
         d: dict[str, Any] = {}
@@ -130,6 +158,10 @@ class CDNMetricsParams:
             d["group_by"] = self.group_by
         if self.limit is not None:
             d["limit"] = self.limit
+        for k in ("country", "asn", "status_range", "status", "cache_status", "device_type", "path_prefix"):
+            v = getattr(self, k)
+            if v:
+                d[k] = v
         return d
 
 
@@ -158,6 +190,13 @@ class UpdateCDNZoneRequest:
     custom_domain: str = ""
     ssl_type: str = ""
     certificate_uuid: str = ""
+    token_auth_enabled: bool | None = None
+    """Require signed URLs. The first activation generates the secret and returns it in the zone."""
+    token_auth_ip_binding: bool | None = None
+    """Bind signed URLs to the client IP."""
+    cors_enabled: bool | None = None
+    cors_allow_origins: str | None = None
+    """"*" or a comma-separated list of origins."""
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {}
@@ -169,6 +208,10 @@ class UpdateCDNZoneRequest:
             d["ssl_type"] = self.ssl_type
         if self.certificate_uuid:
             d["certificate_uuid"] = self.certificate_uuid
+        for k in ("token_auth_enabled", "token_auth_ip_binding", "cors_enabled", "cors_allow_origins"):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
         return d
 
 
@@ -314,3 +357,75 @@ class UpdateCDNRuleRequest:
         if self.enabled is not None:
             d["enabled"] = self.enabled
         return d
+
+
+# ── Cache purge and Token Auth ───────────────────────────────────
+
+
+@dataclass
+class CDNPurge:
+    """A queued purge, or the equivalent one already running."""
+
+    detail: str = ""
+    purge_uuid: str = ""
+    status: str = ""
+    """pending, in_progress, completed, partial, failed or expired."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CDNPurge:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class CDNPurgePop:
+    pop: str = ""
+    expected: int = 0
+    completed: int = 0
+    failed: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CDNPurgePop:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class CDNPurgeStatus:
+    purge_uuid: str = ""
+    scope: str = ""
+    """everything or paths."""
+    paths: list[str] = field(default_factory=list)
+    status: str = ""
+    requested_at: str | None = None
+    completed_at: str | None = None
+    nodes_expected: int = 0
+    nodes_completed: int = 0
+    nodes_failed: int = 0
+    pops: list[CDNPurgePop] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CDNPurgeStatus:
+        nodes = data.get("nodes") or {}
+        return cls(
+            purge_uuid=data.get("purge_uuid", ""),
+            scope=data.get("scope", ""),
+            paths=data.get("paths") or [],
+            status=data.get("status", ""),
+            requested_at=data.get("requested_at"),
+            completed_at=data.get("completed_at"),
+            nodes_expected=nodes.get("expected", 0),
+            nodes_completed=nodes.get("completed", 0),
+            nodes_failed=nodes.get("failed", 0),
+            pops=[CDNPurgePop.from_dict(p) for p in data.get("pops", [])],
+        )
+
+
+@dataclass
+class CDNSignedURL:
+    signed_url: str = ""
+    token: str = ""
+    expires: int = 0
+    """Unix timestamp."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CDNSignedURL:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})

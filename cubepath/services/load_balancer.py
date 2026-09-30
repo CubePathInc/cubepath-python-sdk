@@ -53,6 +53,13 @@ class LoadBalancerService:
     def resize(self, lb_uuid: str, plan_name: str) -> None:
         self._client.post(f"/loadbalancer/{lb_uuid}/resize", json={"plan_name": plan_name})
 
+    def configure_protection(self, lb_uuid: str, enabled: bool) -> None:
+        """A protected load balancer cannot be deleted."""
+        self._client.post(f"/loadbalancer/{lb_uuid}/protection", json={"enabled": enabled})
+
+    def move_to_project(self, lb_uuid: str, project_id: int) -> None:
+        self._client.post(f"/loadbalancer/{lb_uuid}/move-project", json={"project_id": project_id})
+
     def list_plans(self) -> builtins.list[LBLocationPlans]:
         data = self._client.get("/loadbalancer/plans")
         return [LBLocationPlans.from_dict(lp) for lp in data]
@@ -94,6 +101,16 @@ class LoadBalancerService:
             json=req.to_dict(),
         )
         return LBTarget.from_dict(data)
+
+    def add_targets(
+        self, lb_uuid: str, listener_uuid: str, targets: builtins.list[AddTargetRequest]
+    ) -> builtins.list[LBTarget]:
+        """Add up to 50 targets in one call, all or nothing."""
+        data: dict[str, Any] = self._client.post(
+            f"/loadbalancer/{lb_uuid}/listeners/{listener_uuid}/targets/batch",
+            json={"targets": [t.to_dict() for t in targets]},
+        )
+        return [LBTarget.from_dict(t) for t in data.get("targets", [])]
 
     def remove_target(self, lb_uuid: str, listener_uuid: str, target_uuid: str) -> None:
         self._client.delete(f"/loadbalancer/{lb_uuid}/listeners/{listener_uuid}/targets/{target_uuid}")

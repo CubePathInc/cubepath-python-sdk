@@ -16,7 +16,8 @@ class Project:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Project:
         return cls(
-            id=data.get("id", ""),
+            # The create endpoint answers with project_id
+            id=data.get("id", data.get("project_id", "")),
             name=data.get("name", ""),
             description=data.get("description", ""),
             created_at=data.get("created_at", ""),

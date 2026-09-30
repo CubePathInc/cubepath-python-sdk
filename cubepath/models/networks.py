@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
@@ -9,6 +9,9 @@ __all__ = [
     "UpdateNetworkRequest",
     "NetworkRoute",
     "CreateNetworkRouteRequest",
+    "BGPPeer",
+    "CreateBGPPeerRequest",
+    "UpdateBGPPeerRequest",
 ]
 
 
@@ -25,7 +28,13 @@ class Network:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Network:
-        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+        result = cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+        # The create endpoint answers with network_id and location
+        if not result.id and "network_id" in data:
+            result.id = data["network_id"]
+        if not result.location_name and "location" in data:
+            result.location_name = data["location"]
+        return result
 
 
 @dataclass
@@ -79,7 +88,11 @@ class NetworkRoute:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> NetworkRoute:
-        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+        result = cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+        # The create endpoint answers with route_id
+        if not result.id and "route_id" in data:
+            result.id = data["route_id"]
+        return result
 
 
 @dataclass
@@ -97,4 +110,77 @@ class CreateNetworkRouteRequest:
         }
         if self.description:
             d["description"] = self.description
+        return d
+
+
+@dataclass
+class BGPPeer:
+    id: str = ""
+    network_id: int = 0
+    peer_type: str = ""
+    """ip, vps or baremetal."""
+    peer_target: str = ""
+    remote_asn: int = 0
+    max_prefix: int = 0
+    description: str | None = None
+    enabled: bool = True
+    created_at: str = ""
+    resolved_peer_ip: str | None = None
+    """Neighbor IP resolved from the target; None while it cannot be resolved."""
+    last_state: str | None = None
+    """Session state seen by the network (Established, Active, Idle...)."""
+    prefixes_received: int | None = None
+    last_state_at: str | None = None
+    received_prefixes: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BGPPeer:
+        result = cls(
+            **{
+                k: data.get(k, f.default_factory() if callable(f.default_factory) else f.default)
+                for k, f in cls.__dataclass_fields__.items()
+            }
+        )
+        # The create endpoint answers with peer_id
+        if not result.id and "peer_id" in data:
+            result.id = data["peer_id"]
+        return result
+
+
+@dataclass
+class CreateBGPPeerRequest:
+    peer_type: str
+    """ip, vps or baremetal."""
+    peer_target: str
+    """An IP of the network, or the id of a VPS or baremetal attached to it."""
+    remote_asn: int
+    max_prefix: int = 100
+    description: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "peer_type": self.peer_type,
+            "peer_target": self.peer_target,
+            "remote_asn": self.remote_asn,
+            "max_prefix": self.max_prefix,
+        }
+        if self.description is not None:
+            d["description"] = self.description
+        return d
+
+
+@dataclass
+class UpdateBGPPeerRequest:
+    max_prefix: int | None = None
+    description: str | None = None
+    enabled: bool | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {}
+        if self.max_prefix is not None:
+            d["max_prefix"] = self.max_prefix
+        if self.description is not None:
+            d["description"] = self.description
+        if self.enabled is not None:
+            d["enabled"] = self.enabled
         return d

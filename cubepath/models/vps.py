@@ -18,8 +18,16 @@ __all__ = [
     "VPSBackupSettings",
     "CreateVPSBackupRequest",
     "UpdateVPSBackupSettingsRequest",
+    "VPSBackupList",
     "ISO",
     "ISOListResponse",
+    "VPSConsole",
+    "VPSPlanOption",
+    "VPSClusterPlans",
+    "VPSLocationPlans",
+    "AvailabilityGroup",
+    "AvailabilityGroupVPS",
+    "CreateAvailabilityGroupRequest",
 ]
 
 
@@ -219,11 +227,15 @@ class UpdateVPSRequest:
 @dataclass
 class VPSBackup:
     id: str = ""
+    vps_id: int = 0
     backup_type: str = ""
     status: str = ""
     progress: int = 0
-    size_gb: float = 0.0
-    notes: str = ""
+    size_gb: float | None = None
+    notes: str | None = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    error_message: str | None = None
     created_at: str = ""
 
     @classmethod
@@ -241,6 +253,23 @@ class VPSBackupSettings:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSBackupSettings:
         return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class VPSBackupList:
+    backups: list[VPSBackup] = field(default_factory=list)
+    total: int = 0
+    has_settings: bool = False
+    settings: VPSBackupSettings | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> VPSBackupList:
+        return cls(
+            backups=[VPSBackup.from_dict(b) for b in data.get("backups", [])],
+            total=data.get("total", 0),
+            has_settings=data.get("has_settings", False),
+            settings=VPSBackupSettings.from_dict(data["settings"]) if data.get("settings") else None,
+        )
 
 
 @dataclass
@@ -277,7 +306,9 @@ class UpdateVPSBackupSettingsRequest:
 class ISO:
     id: str = ""
     name: str = ""
+    filename: str = ""
     file_size: int = 0
+    description: str | None = None
     is_mounted: bool = False
 
     @classmethod
@@ -294,5 +325,137 @@ class ISOListResponse:
     def from_dict(cls, data: dict[str, Any]) -> ISOListResponse:
         return cls(
             items=[ISO.from_dict(i) for i in data.get("items", [])],
-            mounted_iso_id=data.get("mounted_iso_id", ""),
+            mounted_iso_id=data.get("mounted_iso_id") or "",
         )
+
+
+# ── Console ──────────────────────────────────────────────────────
+
+
+@dataclass
+class VPSConsole:
+    """noVNC connection: open websocket_url and authenticate with ticket."""
+
+    websocket_url: str = ""
+    session_id: str = ""
+    ticket: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> VPSConsole:
+        return cls(
+            websocket_url=data.get("websocket_url", ""),
+            session_id=data.get("session_id", ""),
+            ticket=(data.get("vnc_info") or {}).get("ticket", ""),
+        )
+
+
+# ── Plans ────────────────────────────────────────────────────────
+
+
+@dataclass
+class VPSPlanOption:
+    plan_name: str = ""
+    cpu: int = 0
+    ram: int = 0
+    """MB."""
+    storage: int = 0
+    """GB."""
+    bandwidth: int = 0
+    """TB per month."""
+    price_per_hour: float = 0.0
+    status: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> VPSPlanOption:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class VPSClusterPlans:
+    cluster_name: str = ""
+    type: str = ""
+    plans: list[VPSPlanOption] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> VPSClusterPlans:
+        return cls(
+            cluster_name=data.get("cluster_name", ""),
+            type=data.get("type", ""),
+            plans=[VPSPlanOption.from_dict(p) for p in data.get("plans", [])],
+        )
+
+
+@dataclass
+class VPSLocationPlans:
+    location_name: str = ""
+    description: str = ""
+    clusters: list[VPSClusterPlans] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> VPSLocationPlans:
+        return cls(
+            location_name=data.get("location_name", ""),
+            description=data.get("description", ""),
+            clusters=[VPSClusterPlans.from_dict(c) for c in data.get("clusters", [])],
+        )
+
+
+# ── Availability groups ──────────────────────────────────────────
+
+
+@dataclass
+class AvailabilityGroupVPS:
+    id: int = 0
+    name: str = ""
+    label: str = ""
+    status: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> AvailabilityGroupVPS:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class AvailabilityGroup:
+    uuid: str = ""
+    project_id: int = 0
+    name: str = ""
+    description: str | None = None
+    strategy: str = ""
+    location_name: str = ""
+    max_servers: int = 0
+    vps_count: int = 0
+    vps_list: list[AvailabilityGroupVPS] = field(default_factory=list)
+    """Not returned on creation."""
+    created_at: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> AvailabilityGroup:
+        return cls(
+            uuid=data.get("uuid", ""),
+            project_id=data.get("project_id", 0),
+            name=data.get("name", ""),
+            description=data.get("description"),
+            strategy=data.get("strategy", ""),
+            location_name=data.get("location_name", ""),
+            max_servers=data.get("max_servers", 0),
+            vps_count=data.get("vps_count", 0),
+            vps_list=[AvailabilityGroupVPS.from_dict(v) for v in data.get("vps_list", [])],
+            created_at=data.get("created_at", ""),
+        )
+
+
+@dataclass
+class CreateAvailabilityGroupRequest:
+    """A spread group: its servers run on different hosts."""
+
+    project_id: int
+    name: str
+    location_name: str
+    description: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"project_id": self.project_id, "name": self.name, "location_name": self.location_name}
+        if self.description is not None:
+            d["description"] = self.description
+        return d

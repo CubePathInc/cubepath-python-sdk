@@ -13,6 +13,9 @@ __all__ = [
     "CreateDNSRecordRequest",
     "UpdateDNSRecordRequest",
     "UpdateSOARequest",
+    "DNSRegion",
+    "DNSHealthCheck",
+    "UpsertDNSHealthCheckRequest",
 ]
 
 
@@ -44,6 +47,10 @@ class DNSRecord:
     weight: int | None = None
     port: int | None = None
     comment: str = ""
+    region: str | None = None
+    """GeoDNS region; None means global."""
+    created_at: str = ""
+    updated_at: str = ""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DNSRecord:
@@ -58,7 +65,10 @@ class DNSRecord:
             priority=data.get("priority"),
             weight=data.get("weight"),
             port=data.get("port"),
-            comment=data.get("comment", ""),
+            comment=data.get("comment") or "",
+            region=data.get("region"),
+            created_at=data.get("created_at", ""),
+            updated_at=data.get("updated_at", ""),
         )
 
 
@@ -80,8 +90,10 @@ class SOARecord:
 @dataclass
 class ZoneVerifyResponse:
     verified: bool = False
+    detail: str = ""
+    # Deprecated: the API returns ``detail``; kept for compatibility, always empty.
     message: str = ""
-    next_check_at: str = ""
+    next_check_at: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ZoneVerifyResponse:
@@ -127,6 +139,8 @@ class CreateDNSRecordRequest:
     weight: int | None = None
     port: int | None = None
     comment: str = ""
+    region: str = ""
+    """GeoDNS region code (see list_regions); empty means global. Pro and Business tiers only."""
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -143,6 +157,8 @@ class CreateDNSRecordRequest:
             d["port"] = self.port
         if self.comment:
             d["comment"] = self.comment
+        if self.region:
+            d["region"] = self.region
         return d
 
 
@@ -152,6 +168,11 @@ class UpdateDNSRecordRequest:
     content: str = ""
     ttl: int | None = None
     priority: int | None = None
+    weight: int | None = None
+    port: int | None = None
+    comment: str | None = None
+    region: str | None = None
+    """GeoDNS region code; "global" serves the record everywhere."""
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {}
@@ -159,10 +180,10 @@ class UpdateDNSRecordRequest:
             d["name"] = self.name
         if self.content:
             d["content"] = self.content
-        if self.ttl is not None:
-            d["ttl"] = self.ttl
-        if self.priority is not None:
-            d["priority"] = self.priority
+        for k in ("ttl", "priority", "weight", "port", "comment", "region"):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
         return d
 
 
@@ -186,4 +207,75 @@ class UpdateSOARequest:
             d["minimum"] = self.minimum
         if self.hostmaster:
             d["hostmaster"] = self.hostmaster
+        return d
+
+
+# ── GeoDNS and health checks ─────────────────────────────────────
+
+
+@dataclass
+class DNSRegion:
+    code: str = ""
+    name: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> DNSRegion:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class DNSHealthCheck:
+    uuid: str = ""
+    record_uuid: str = ""
+    name: str = ""
+    check_type: str = ""
+    """http, https, tcp or ping."""
+    target: str | None = None
+    port: int | None = None
+    path: str | None = None
+    expected_status: int | None = None
+    interval_secs: int = 0
+    timeout_secs: int = 0
+    healthy_threshold: int = 0
+    unhealthy_threshold: int = 0
+    enabled: bool = True
+    last_status: str = ""
+    """healthy, unhealthy or unknown."""
+    last_check_at: str | None = None
+    created_at: str = ""
+    updated_at: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> DNSHealthCheck:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class UpsertDNSHealthCheckRequest:
+    """Health check of a record: while unhealthy the record is left out of the answers.
+
+    Pro and Business tiers only, billed while enabled.
+    """
+
+    name: str
+    check_type: str
+    """http, https, tcp or ping."""
+    target: str | None = None
+    """Host or IP to check; defaults to the record content."""
+    port: int | None = None
+    """Required for tcp."""
+    path: str | None = None
+    expected_status: int | None = 200
+    interval_secs: int = 60
+    timeout_secs: int = 5
+    healthy_threshold: int = 2
+    unhealthy_threshold: int = 3
+    enabled: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {}
+        for k in self.__dataclass_fields__:
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
         return d

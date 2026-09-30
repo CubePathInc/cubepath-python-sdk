@@ -16,6 +16,11 @@ __all__ = [
     "SensorReading",
     "IPMISession",
     "ReinstallStatus",
+    "BaremetalKVM",
+    "BaremetalDiskLayoutOption",
+    "BaremetalOSOption",
+    "BaremetalModelOption",
+    "BaremetalModelLocation",
 ]
 
 
@@ -242,3 +247,89 @@ class ReinstallStatus:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ReinstallStatus:
         return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class BaremetalKVM:
+    """KVM-over-IP console access."""
+
+    url: str = ""
+    username: str = ""
+    password: str | None = None
+    updated_at: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BaremetalKVM:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class BaremetalDiskLayoutOption:
+    id: int = 0
+    name: str = ""
+    disk_layout_name: str = ""
+    disk_type: str | None = None
+    raid_type: str | None = None
+    disk_count: int | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BaremetalDiskLayoutOption:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class BaremetalOSOption:
+    """An operating system that can be installed on a server, with its disk layouts."""
+
+    id: int = 0
+    os_name: str = ""
+    operating_system: str | None = None
+    disk_layouts: list[BaremetalDiskLayoutOption] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BaremetalOSOption:
+        return cls(
+            id=data.get("id", 0),
+            os_name=data.get("os_name", ""),
+            operating_system=data.get("operating_system"),
+            disk_layouts=[BaremetalDiskLayoutOption.from_dict(d) for d in data.get("disk_layouts", [])],
+        )
+
+
+@dataclass
+class BaremetalModelOption:
+    model_name: str = ""
+    price: float = 0.0
+    """Monthly."""
+    discount_value: float = 0.0
+    discount_type: str | None = None
+    cpu: str = ""
+    cpu_specs: str = ""
+    cpu_bench: float | None = None
+    ram_size: int = 0
+    ram_type: str = ""
+    disk_size: str = ""
+    disk_type: str | None = None
+    port: int = 0
+    setup: float = 0.0
+    kvm: str = ""
+    stock_available: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BaremetalModelOption:
+        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+
+
+@dataclass
+class BaremetalModelLocation:
+    location_name: str = ""
+    description: str = ""
+    models: list[BaremetalModelOption] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BaremetalModelLocation:
+        return cls(
+            location_name=data.get("location_name", ""),
+            description=data.get("description", ""),
+            models=[BaremetalModelOption.from_dict(m) for m in data.get("models", [])],
+        )

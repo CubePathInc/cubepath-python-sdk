@@ -9,7 +9,7 @@ import httpx
 from cubepath.exceptions import APIError
 
 DEFAULT_BASE_URL = "https://api.cubepath.com"
-SDK_VERSION = "0.5.1"
+SDK_VERSION = "0.6.0"
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_RETRY_WAIT_MIN = 1.0
@@ -59,20 +59,23 @@ class CubePathClient:
 
         # Lazy-init services
         from cubepath.services.ai_gateway import AIGatewayService
+        from cubepath.services.alerts import AlertService
         from cubepath.services.baremetal import BaremetalService
         from cubepath.services.cdn import CDNService
-        from cubepath.services.ddos import DDoSService
+        from cubepath.services.ddos import DDoSMitigationService, DDoSService
         from cubepath.services.dns import DNSService
         from cubepath.services.firewall import FirewallService
         from cubepath.services.floating_ips import FloatingIPService
         from cubepath.services.kubernetes import KubernetesService
         from cubepath.services.load_balancer import LoadBalancerService
+        from cubepath.services.managed_databases import ManagedDatabaseService
         from cubepath.services.nat_gateway import NATGatewayService
         from cubepath.services.networks import NetworkService
         from cubepath.services.object_storage import ObjectStorageService
         from cubepath.services.pricing import PricingService
         from cubepath.services.projects import ProjectService
         from cubepath.services.ssh_keys import SSHKeyService
+        from cubepath.services.transcoder import TranscoderService
         from cubepath.services.vps import VPSService
 
         self.projects = ProjectService(self)
@@ -90,6 +93,10 @@ class CubePathClient:
         self.kubernetes = KubernetesService(self)
         self.pricing = PricingService(self)
         self.ddos = DDoSService(self)
+        self.ddos_mitigation = DDoSMitigationService(self)
+        self.managed_databases = ManagedDatabaseService(self)
+        self.alerts = AlertService(self)
+        self.transcoder = TranscoderService(self)
         self.ai_gateway = AIGatewayService(self, base_url=ai_gateway_base_url)
 
     # ── HTTP helpers ──────────────────────────────────────────────
@@ -141,23 +148,30 @@ class CubePathClient:
         json: Any | None = None,
         params: dict[str, Any] | None = None,
         raw: bool = False,
+        files: dict[str, Any] | None = None,
     ) -> Any:
         """Execute an API request with rate-limiting and retries.
 
-        Returns parsed JSON (dict/list) or raw bytes when *raw=True*.
+        Returns parsed JSON (dict/list) or raw bytes when *raw=True*. ``files`` sends a
+        multipart/form-data body instead of JSON.
         """
         url = f"{self._base_url}{path}"
         last_error: Exception | None = None
 
         for attempt in range(self._max_retries + 1):
             self._rate_limit()
+            headers = self._headers()
+            if files is not None:
+                # httpx sets the multipart boundary itself
+                del headers["Content-Type"]
             try:
                 resp = self._http.request(
                     method,
                     url,
-                    headers=self._headers(),
+                    headers=headers,
                     json=json,
                     params=params,
+                    files=files,
                 )
             except httpx.HTTPError as exc:
                 last_error = exc
@@ -187,8 +201,15 @@ class CubePathClient:
     def get(self, path: str, *, params: dict[str, Any] | None = None) -> Any:
         return self.request("GET", path, params=params)
 
-    def post(self, path: str, *, json: Any | None = None, params: dict[str, Any] | None = None) -> Any:
-        return self.request("POST", path, json=json, params=params)
+    def post(
+        self,
+        path: str,
+        *,
+        json: Any | None = None,
+        params: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
+    ) -> Any:
+        return self.request("POST", path, json=json, params=params, files=files)
 
     def put(self, path: str, *, json: Any | None = None, params: dict[str, Any] | None = None) -> Any:
         return self.request("PUT", path, json=json, params=params)

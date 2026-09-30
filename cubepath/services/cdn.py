@@ -6,7 +6,10 @@ from cubepath.models.cdn import (
     CDNMetricsParams,
     CDNOrigin,
     CDNPlan,
+    CDNPurge,
+    CDNPurgeStatus,
     CDNRule,
+    CDNSignedURL,
     CDNZone,
     CreateCDNOriginRequest,
     CreateCDNRuleRequest,
@@ -128,6 +131,54 @@ class CDNService:
             params=params.to_params() if params else None,
         )
 
+    def get_metrics_summary(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Totals: requests, bandwidth, cache hit rate and error rate."""
+        return self.get_metrics(zone_uuid, "summary", params)
+
+    def get_metrics_requests(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Requests over time."""
+        return self.get_metrics(zone_uuid, "requests", params)
+
+    def get_metrics_bandwidth(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Bandwidth over time, or by region with group_by="region"."""
+        return self.get_metrics(zone_uuid, "bandwidth", params)
+
+    def get_metrics_cache(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Cache hits and misses over time."""
+        return self.get_metrics(zone_uuid, "cache", params)
+
+    def get_metrics_status_codes(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Requests by HTTP status code."""
+        return self.get_metrics(zone_uuid, "status-codes", params)
+
+    def get_metrics_top_urls(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Most requested URLs."""
+        return self.get_metrics(zone_uuid, "top-urls", params)
+
+    def get_metrics_top_countries(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Countries sending the most requests."""
+        return self.get_metrics(zone_uuid, "top-countries", params)
+
+    def get_metrics_top_asn(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Networks (ASN) sending the most requests."""
+        return self.get_metrics(zone_uuid, "top-asn", params)
+
+    def get_metrics_top_user_agents(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Most common user agents."""
+        return self.get_metrics(zone_uuid, "top-user-agents", params)
+
+    def get_metrics_blocked(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Requests blocked by WAF and rate limit rules."""
+        return self.get_metrics(zone_uuid, "blocked", params)
+
+    def get_metrics_pops(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Requests by CDN location."""
+        return self.get_metrics(zone_uuid, "pops", params)
+
+    def get_metrics_file_extensions(self, zone_uuid: str, params: CDNMetricsParams | None = None) -> Any:
+        """Requests by file extension."""
+        return self.get_metrics(zone_uuid, "file-extensions", params)
+
     # ── Actions ──────────────────────────────────────────────────
 
     def request_ssl(self, zone_uuid: str) -> Any:
@@ -145,3 +196,39 @@ class CDNService:
             f"/cdn/zones/{zone_uuid}/move-project",
             json={"project_id": project_id},
         )
+
+    # ── Cache purge ──────────────────────────────────────────────
+
+    def purge_cache(self, zone_uuid: str, *, everything: bool = False, paths: list[str] | None = None) -> CDNPurge:
+        """Purge every cached file, or up to 100 paths (a trailing * purges a prefix). Set exactly one."""
+        data: dict[str, Any] = self._client.post(
+            f"/cdn/zones/{zone_uuid}/purge-cache",
+            json={"everything": everything, "paths": paths or []},
+        )
+        return CDNPurge.from_dict(data)
+
+    def list_purges(self, zone_uuid: str) -> list[CDNPurgeStatus]:
+        """Latest 20 purges of the zone, newest first, with their progress per CDN location."""
+        data: list[dict[str, Any]] = self._client.get(f"/cdn/zones/{zone_uuid}/purge-cache")
+        return [CDNPurgeStatus.from_dict(p) for p in data]
+
+    # ── Token Auth ───────────────────────────────────────────────
+
+    def rotate_token_secret(self, zone_uuid: str) -> str:
+        """Generate a new Token Auth secret and return it. It cannot be read again later."""
+        data: dict[str, Any] = self._client.post(f"/cdn/zones/{zone_uuid}/token-auth/rotate-secret")
+        secret: str = data.get("token_auth_secret", "")
+        return secret
+
+    def sign_url(
+        self, zone_uuid: str, path: str, *, expires_in: int = 3600, client_ip: str | None = None
+    ) -> CDNSignedURL:
+        """Signed URL for a zone with Token Auth, valid expires_in seconds (60 to 604800).
+
+        client_ip is required when the zone binds URLs to the client IP.
+        """
+        body: dict[str, Any] = {"path": path, "expires_in": expires_in}
+        if client_ip is not None:
+            body["client_ip"] = client_ip
+        data: dict[str, Any] = self._client.post(f"/cdn/zones/{zone_uuid}/token-auth/sign-url", json=body)
+        return CDNSignedURL.from_dict(data)
