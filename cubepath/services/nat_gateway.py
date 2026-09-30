@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from cubepath.exceptions import APIError
 from cubepath.models.nat_gateway import (
     CreateNATGatewayRequest,
     NATGateway,
@@ -49,10 +50,30 @@ class NATGatewayService:
     def configure_protection(self, uuid: str, enabled: bool) -> None:
         self._client.post(f"/nat-gateway/{uuid}/protection", json={"enabled": enabled})
 
-    def get_metrics(self, uuid: str) -> dict[str, Any]:
-        result: dict[str, Any] = self._client.get(f"/nat-gateway/{uuid}/metrics")
+    def get_metrics(self, uuid: str, time_range: str = "H1") -> dict[str, Any]:
+        """Traffic of the gateway (series bytes_in and bytes_out, bytes per second).
+
+        ``time_range`` is H1, H3, H6, H12, H24, D3, D7 or D30. Served through GraphQL; returns
+        ``{"start", "end", "step", "series": [{"name", "unit", "points": [{"ts", "value"}]}]}``.
+        """
+        data = self._client.graphql(
+            "query($uuid: ID!, $range: TimeRange!) { natGateway(uuid: $uuid) { metrics(range: $range) "
+            "{ start end step series { name unit points { ts value } } } } }",
+            {"uuid": uuid, "range": time_range},
+        )
+        if not data.get("natGateway"):
+            raise APIError(404, "Not Found", f"NAT gateway {uuid} not found")
+        result: dict[str, Any] = data["natGateway"]["metrics"]
         return result
 
     def get_bandwidth_usage(self, uuid: str) -> dict[str, Any]:
-        result: dict[str, Any] = self._client.get(f"/nat-gateway/{uuid}/bandwidth-usage")
+        """Month-to-date traffic: ``{"inBytes", "outBytes", "totalBytes", "periodStart", "periodEnd"}``."""
+        data = self._client.graphql(
+            "query($uuid: ID!) { natGateway(uuid: $uuid) { bandwidthUsage "
+            "{ inBytes outBytes totalBytes periodStart periodEnd } } }",
+            {"uuid": uuid},
+        )
+        if not data.get("natGateway"):
+            raise APIError(404, "Not Found", f"NAT gateway {uuid} not found")
+        result: dict[str, Any] = data["natGateway"]["bandwidthUsage"]
         return result
