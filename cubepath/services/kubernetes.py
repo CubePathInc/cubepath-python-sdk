@@ -12,6 +12,7 @@ from cubepath.models.kubernetes import (
     KubernetesCluster,
     KubernetesClusterResponse,
     KubernetesLB,
+    KubernetesMetrics,
     KubernetesPlan,
     KubernetesVersion,
     NodePool,
@@ -62,6 +63,24 @@ class KubernetesService:
 
     def move(self, cluster_uuid: str, project_id: str) -> None:
         self._client.post(f"/kubernetes/{cluster_uuid}/move", json={"project_id": project_id})
+
+    def configure_protection(self, cluster_uuid: str, enabled: bool) -> None:
+        """A protected cluster cannot be deleted."""
+        self._client.post(f"/kubernetes/{cluster_uuid}/protection", json={"enabled": enabled})
+
+    def get_metrics(self, cluster_uuid: str, time_range: str = "1h") -> KubernetesMetrics:
+        """Ready nodes, pending and failed pods and API latency. time_range: 1h, 3h, 6h, 12h, 24h, 3d, 7d or 30d."""
+        data: dict[str, Any] = self._client.get(
+            f"/kubernetes/{cluster_uuid}/metrics", params={"time_range": time_range}
+        )
+        return KubernetesMetrics.from_dict(data)
+
+    def get_node_metrics(self, cluster_uuid: str, node_name: str, time_range: str = "1h") -> KubernetesMetrics:
+        """Readiness, kubelet CPU and memory and the usage of the node's server (vps_* series)."""
+        data: dict[str, Any] = self._client.get(
+            f"/kubernetes/{cluster_uuid}/nodes/{node_name}/metrics", params={"time_range": time_range}
+        )
+        return KubernetesMetrics.from_dict(data)
 
     def list_load_balancers(self, cluster_uuid: str) -> builtins.list[KubernetesLB]:
         data = self._client.get(f"/kubernetes/{cluster_uuid}/loadbalancers")

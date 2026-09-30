@@ -1,3 +1,4 @@
+from cubepath.models.alerts import *  # noqa: F403
 from cubepath.models.baremetal import *  # noqa: F403
 from cubepath.models.cdn import *  # noqa: F403
 from cubepath.models.ddos import *  # noqa: F403
@@ -6,10 +7,12 @@ from cubepath.models.firewall import *  # noqa: F403
 from cubepath.models.floating_ips import *  # noqa: F403
 from cubepath.models.kubernetes import *  # noqa: F403
 from cubepath.models.load_balancer import *  # noqa: F403
+from cubepath.models.managed_databases import *  # noqa: F403
 from cubepath.models.nat_gateway import *  # noqa: F403
 from cubepath.models.networks import *  # noqa: F403
 from cubepath.models.object_storage import *  # noqa: F403
 from cubepath.models.pricing import *  # noqa: F403
 from cubepath.models.projects import *  # noqa: F403
 from cubepath.models.ssh_keys import *  # noqa: F403
+from cubepath.models.transcoder import *  # noqa: F403
 from cubepath.models.vps import *  # noqa: F403

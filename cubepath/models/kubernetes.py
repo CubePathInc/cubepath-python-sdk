@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
+    "KubernetesMetrics",
     "KubernetesVersion",
     "KubernetesPlan",
     "KubernetesCluster",
@@ -376,3 +377,21 @@ class InstallAddonRequest:
         if self.custom_values:
             d["custom_values"] = self.custom_values
         return d
+
+
+@dataclass
+class KubernetesMetrics:
+    start: int = 0
+    end: int = 0
+    step: int = 0
+    metrics: dict[str, list[list[float]]] = field(default_factory=dict)
+    """Series name to [unix_timestamp, value] points."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> KubernetesMetrics:
+        return cls(
+            start=data.get("start", 0),
+            end=data.get("end", 0),
+            step=data.get("step", 0),
+            metrics=data.get("metrics") or {},
+        )

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, Any
 
 from cubepath.exceptions import APIError
 from cubepath.models.baremetal import (
     Baremetal,
+    BaremetalKVM,
+    BaremetalModelLocation,
+    BaremetalOSOption,
     BMCSensors,
     CreateBaremetalRequest,
     IPMISession,
@@ -97,3 +101,39 @@ class BaremetalService:
 
     def monitoring_disable(self, baremetal_id: str) -> None:
         self._client.put(f"/baremetal/{baremetal_id}/monitoring", params={"enable": "false"})
+
+    def list_models(self) -> builtins.list[BaremetalModelLocation]:
+        """Server models by location, with price and stock."""
+        data: dict[str, Any] = self._client.get("/baremetal/models")
+        return [BaremetalModelLocation.from_dict(loc) for loc in data.get("locations", [])]
+
+    def list_os(self, baremetal_id: str) -> builtins.list[BaremetalOSOption]:
+        """Operating systems and disk layouts that can be installed on the server."""
+        data: list[dict[str, Any]] = self._client.get(f"/baremetal/os/{baremetal_id}")
+        return [BaremetalOSOption.from_dict(o) for o in data]
+
+    def kvm(self, baremetal_id: str) -> BaremetalKVM:
+        """KVM-over-IP console URL and credentials, for servers that have one."""
+        data: dict[str, Any] = self._client.get(f"/baremetal/{baremetal_id}/kvm")
+        return BaremetalKVM.from_dict(data)
+
+    def configure_protection(self, baremetal_id: str, enabled: bool) -> None:
+        """A protected server cannot be reinstalled."""
+        self._client.post(f"/baremetal/{baremetal_id}/protection", json={"enabled": enabled})
+
+    def move_to_project(self, baremetal_id: str, project_id: int) -> None:
+        self._client.post(f"/baremetal/{baremetal_id}/move-project", json={"project_id": project_id})
+
+    def add_ssh_keys(self, baremetal_id: str, ssh_key_ids: builtins.list[int]) -> None:
+        """Authorise more SSH keys on the server."""
+        self._client.post(f"/baremetal/{baremetal_id}/ssh-keys", json=ssh_key_ids)
+
+    def remove_ssh_key(self, baremetal_id: str, ssh_key_id: int | str) -> None:
+        self._client.delete(f"/baremetal/{baremetal_id}/ssh-keys/{ssh_key_id}")
+
+    def attach_network(self, baremetal_id: str, network_id: int) -> None:
+        """Attach a private network to the server."""
+        self._client.post(f"/baremetal/{baremetal_id}/network", json={"network_id": network_id})
+
+    def detach_network(self, baremetal_id: str) -> None:
+        self._client.delete(f"/baremetal/{baremetal_id}/network")

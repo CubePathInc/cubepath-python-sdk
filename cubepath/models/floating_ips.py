@@ -20,7 +20,11 @@ class FloatingIP:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FloatingIP:
-        return cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+        result = cls(**{k: data.get(k, f.default) for k, f in cls.__dataclass_fields__.items()})
+        # The acquire endpoint answers with ip_address
+        if not result.address and "ip_address" in data:
+            result.address = data["ip_address"]
+        return result
 
 
 @dataclass

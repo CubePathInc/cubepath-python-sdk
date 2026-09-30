@@ -18,7 +18,8 @@ class SSHKey:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SSHKey:
         return cls(
-            id=data.get("id", ""),
+            # The create endpoint answers with ssh_key_id
+            id=data.get("id", data.get("ssh_key_id", "")),
             name=data.get("name", ""),
             ssh_key=data.get("ssh_key", ""),
             fingerprint=data.get("fingerprint", ""),

@@ -43,17 +43,22 @@ print(f"Task: {task.task_id}")
 | VPS | `client.vps` | Virtual private servers |
 | VPS Backups | `client.vps.backups()` | VPS backup management |
 | VPS ISOs | `client.vps.isos()` | ISO mount/unmount |
+| Availability Groups | `client.vps.availability_groups()` | Spread groups of VPS |
 | Baremetal | `client.baremetal` | Bare metal servers |
-| Networks | `client.networks` | Private networks |
+| Networks | `client.networks` | Private networks, routes, BGP peers |
 | Floating IPs | `client.floating_ips` | Floating IP addresses |
 | Firewall | `client.firewall` | Firewall groups & rules |
 | DNS | `client.dns` | DNS zones & records |
 | Load Balancer | `client.load_balancer` | Load balancers, listeners, targets |
-| CDN | `client.cdn` | CDN zones, origins, rules, WAF |
+| CDN | `client.cdn` | CDN zones, origins, rules, WAF, cache purge, signed URLs, metrics |
 | Object Storage | `client.object_storage` | S3 compatible buckets, access keys, usage |
-| Kubernetes | `client.kubernetes` | K8s clusters, node pools, addons |
+| Kubernetes | `client.kubernetes` | K8s clusters, node pools, addons, metrics |
+| Managed Databases | `client.managed_databases` | Managed MySQL, Valkey and PostgreSQL |
 | Pricing | `client.pricing` | Pricing information |
 | DDoS | `client.ddos` | DDoS attack reports |
+| DDoS Mitigation | `client.ddos_mitigation` | Premium protection profiles, filters, firewall rules, traffic capture |
+| Cloud Alerts | `client.alerts` | Metric alerts and notification channels |
+| Transcoder | `client.transcoder` | Video transcoding jobs |
 
 ## Configuration
 
@@ -198,6 +203,112 @@ client.cdn.create_origin(zone.uuid, CreateCDNOriginRequest(
 
 client.object_storage.delete_key(key.uuid)
 client.object_storage.delete_bucket(bucket.uuid, force=True)  # force purges the content first
+```
+
+### Managed Databases
+
+Databases are created asynchronously: poll `get()` until `status` is `active`. The plan
+decides the location and the per-node size; the price is per node.
+
+```python
+import time
+
+from cubepath.models import CreateManagedDatabaseRequest, CreateManagedDatabaseUserRequest
+
+locations = client.managed_databases.list_plans(engine="postgresql")
+plan = locations[0].plans[0]
+
+db = client.managed_databases.create(CreateManagedDatabaseRequest(
+    project_id=12,
+    name="app-db",
+    engine="postgresql",
+    version="17.5.0",
+    plan_uuid=plan.uuid,
+    replicas=2,
+))
+while client.managed_databases.get(db.uuid).status != "active":
+    time.sleep(30)
+
+creds = client.managed_databases.get_credentials(db.uuid)
+print(creds.uri)
+
+client.managed_databases.create_database(db.uuid, "app")
+user = client.managed_databases.create_user(db.uuid, CreateManagedDatabaseUserRequest(username="app"))
+print(user.password)  # only returned here
+
+client.managed_databases.scale(db.uuid, replicas=3)
+client.managed_databases.update_config(db.uuid, {"max_connections": 200})
+client.managed_databases.delete(db.uuid)
+```
+
+### DDoS Mitigation
+
+Profiles, traffic capture and stats need an IP with Premium protection; firewall rules and
+prefix lists work on any IP of the organization.
+
+```python
+from cubepath.models import CreateDDoSFirewallRuleRequest
+
+ips = client.ddos_mitigation.list_ips()
+
+profile = client.ddos_mitigation.get_profile("203.0.113.5")
+req = profile.to_request()  # an update replaces the whole profile
+req.country_mode = 2        # whitelist
+client.ddos_mitigation.update_profile("203.0.113.5", req)
+client.ddos_mitigation.set_profile_countries("203.0.113.5", ["ES", "FR"])
+
+client.ddos_mitigation.create_firewall_rule(CreateDDoSFirewallRuleRequest(
+    network="203.0.113.5", protocol=17, dst_port=0, action=0,  # drop all UDP
+))
+rules = client.ddos_mitigation.list_firewall_rules("203.0.113.5")
+```
+
+### Cloud Alerts
+
+```python
+from cubepath.models import AlertActionRequest, CreateAlertRequest, CreateNotificatorRequest
+
+channel = client.alerts.create_notificator(CreateNotificatorRequest(
+    name="ops", type="slack", config={"webhook_url": "https://hooks.slack.com/services/..."},
+))
+alert = client.alerts.create(CreateAlertRequest(
+    project_id=12,
+    name="High CPU",
+    target_type="vps",
+    target_id="1234",
+    metric_type="cpu",
+    operator="gt",
+    threshold=90,
+    actions=[AlertActionRequest(action_type="notify", notificator_id=channel.id)],
+))
+history = client.alerts.history(alert.id)
+```
+
+### Video Transcoder
+
+Output always goes to your own S3 compatible bucket (for example a CubePath Object Storage
+bucket and access key).
+
+```python
+from cubepath.models import (
+    CreateTranscoderJobRequest,
+    TranscoderJobInput,
+    TranscoderJobOutput,
+    TranscoderOutputSpec,
+    TranscoderS3Config,
+)
+
+job = client.transcoder.create_job(CreateTranscoderJobRequest(
+    input=TranscoderJobInput(source="url", url="https://example.com/video.mp4"),
+    output=TranscoderJobOutput(s3=TranscoderS3Config(
+        bucket="media", path="videos/out/", endpoint="https://eu.cubestorage.io", region="eu",
+        access_key="...", secret_key="...",
+    )),
+    outputs=[TranscoderOutputSpec(type="file", options={"codec": "h264", "height": 720, "container": "mp4"})],
+))
+while client.transcoder.get_job(job.uuid).status not in ("completed", "failed", "canceled"):
+    time.sleep(10)
+print(client.transcoder.get_job_outputs(job.uuid).outputs)
 ```
 
 ### DNS Management

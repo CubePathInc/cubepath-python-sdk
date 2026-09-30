@@ -23,11 +23,15 @@ class ProjectService:
     def get(self, project_id: str) -> ProjectResponse:
         projects = self.list()
         for p in projects:
-            if p.project.id == project_id:
+            if str(p.project.id) == str(project_id):
                 return p
         from cubepath.exceptions import APIError
 
         raise APIError(404, "Not Found", f"project {project_id} not found")
+
+    def update(self, project_id: str, name: str) -> None:
+        """Rename a project."""
+        self._client.put(f"/projects/{project_id}", json={"name": name})
 
     def delete(self, project_id: str) -> None:
         self._client.delete(f"/projects/{project_id}")
