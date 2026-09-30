@@ -9,7 +9,7 @@ import httpx
 from cubepath.exceptions import APIError
 
 DEFAULT_BASE_URL = "https://api.cubepath.com"
-SDK_VERSION = "0.2.0"
+SDK_VERSION = "0.5.0"
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_RETRY_WAIT_MIN = 1.0
@@ -69,6 +69,7 @@ class CubePathClient:
         from cubepath.services.load_balancer import LoadBalancerService
         from cubepath.services.nat_gateway import NATGatewayService
         from cubepath.services.networks import NetworkService
+        from cubepath.services.object_storage import ObjectStorageService
         from cubepath.services.pricing import PricingService
         from cubepath.services.projects import ProjectService
         from cubepath.services.ssh_keys import SSHKeyService
@@ -85,6 +86,7 @@ class CubePathClient:
         self.load_balancer = LoadBalancerService(self)
         self.nat_gateway = NATGatewayService(self)
         self.cdn = CDNService(self)
+        self.object_storage = ObjectStorageService(self)
         self.kubernetes = KubernetesService(self)
         self.pricing = PricingService(self)
         self.ddos = DDoSService(self)

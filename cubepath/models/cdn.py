@@ -35,6 +35,8 @@ class CDNOrigin:
     host_header: str = ""
     base_path: str = ""
     enabled: bool = True
+    object_storage_bucket_uuid: str | None = None
+    """Set when the origin serves a CubePath Object Storage bucket."""
     created_at: str = ""
     updated_at: str = ""
 
@@ -186,8 +188,19 @@ class CreateCDNOriginRequest:
     protocol: str = ""
     host_header: str = ""
     base_path: str = ""
+    object_storage_bucket_uuid: str = ""
+    """Serve a CubePath Object Storage bucket. The API then sets every connection field itself,
+    so only name, weight, priority and is_backup are sent next to it."""
 
     def to_dict(self) -> dict[str, Any]:
+        if self.object_storage_bucket_uuid:
+            return {
+                "name": self.name,
+                "object_storage_bucket_uuid": self.object_storage_bucket_uuid,
+                "weight": self.weight,
+                "priority": self.priority,
+                "is_backup": self.is_backup,
+            }
         d: dict[str, Any] = {
             "name": self.name,
             "weight": self.weight,
