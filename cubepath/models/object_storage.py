@@ -6,6 +6,8 @@ from typing import Any
 __all__ = [
     "ObjectStorageTierSummary",
     "ObjectStorageTier",
+    "ObjectStorageLockRetention",
+    "ObjectStorageObjectLock",
     "ObjectStorageBucket",
     "ObjectStorageBucketConnection",
     "ObjectStorageBucketUsage",
@@ -14,6 +16,7 @@ __all__ = [
     "CreateObjectStorageBucketRequest",
     "CreateObjectStorageBucketResponse",
     "UpdateObjectStorageBucketRequest",
+    "SetObjectStorageObjectLockRequest",
     "ObjectStorageBucketScope",
     "ObjectStorageAccessKey",
     "CreateObjectStorageAccessKeyRequest",
@@ -70,6 +73,46 @@ class ObjectStorageTier:
 
 
 @dataclass
+class ObjectStorageLockRetention:
+    """An Object Lock default retention. ``mode`` is "governance" (keys with ``bypass_governance``
+    can still delete early) or "compliance" (nobody can delete or shorten it before the date).
+    Set exactly one of ``days`` or ``years``."""
+
+    mode: str = "governance"
+    days: int | None = None
+    years: int | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageLockRetention:
+        result: ObjectStorageLockRetention = _simple(cls, data)
+        return result
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"mode": self.mode}
+        if self.days is not None:
+            d["days"] = self.days
+        if self.years is not None:
+            d["years"] = self.years
+        return d
+
+
+@dataclass
+class ObjectStorageObjectLock:
+    enabled: bool = False
+    default_retention: ObjectStorageLockRetention | None = None
+    """None when the bucket has no default retention."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageObjectLock:
+        data = data or {}
+        rule = data.get("default_retention")
+        return cls(
+            enabled=bool(data.get("enabled", False)),
+            default_retention=ObjectStorageLockRetention.from_dict(rule) if rule else None,
+        )
+
+
+@dataclass
 class ObjectStorageBucket:
     uuid: str = ""
     name: str = ""
@@ -89,11 +132,17 @@ class ObjectStorageBucket:
     usage_updated_at: str | None = None
     monthly_charges: float = 0.0
     cdn_connected: bool = False
+    object_lock: ObjectStorageObjectLock = field(default_factory=ObjectStorageObjectLock)
+    """Object Lock state: chosen when the bucket is created, never added later."""
+    locked_content_kept: bool = False
+    """The last delete left versions protected by Object Lock (retention or legal hold): the
+    bucket stays and keeps being billed until they expire. Cleared by the next delete."""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ObjectStorageBucket:
         result: ObjectStorageBucket = _simple(cls, data)
         result.tier = ObjectStorageTierSummary.from_dict(data.get("tier"))
+        result.object_lock = ObjectStorageObjectLock.from_dict(data.get("object_lock"))
         return result
 
 
@@ -160,6 +209,7 @@ class ObjectStorageBucketDetail(ObjectStorageBucket):
     def from_dict(cls, data: dict[str, Any]) -> ObjectStorageBucketDetail:
         result: ObjectStorageBucketDetail = _simple(cls, data)
         result.tier = ObjectStorageTierSummary.from_dict(data.get("tier"))
+        result.object_lock = ObjectStorageObjectLock.from_dict(data.get("object_lock"))
         result.connection = ObjectStorageBucketConnection.from_dict(data.get("connection"))
         result.usage = ObjectStorageBucketUsage.from_dict(data["usage"]) if data.get("usage") else None
         result.cdn = ObjectStorageBucketCDN.from_dict(data["cdn"]) if data.get("cdn") else None
@@ -173,14 +223,42 @@ class CreateObjectStorageBucketRequest:
     """Tier uuid or slug, for example "infrequent_access"."""
     project_id: int | None = None
     versioning: bool = False
+    object_lock: bool = False
+    """Create the bucket with Object Lock (WORM). Only possible now, never later. It implies
+    versioning and the bucket is created with deletion protection on."""
+    object_lock_default: ObjectStorageLockRetention | None = None
+    """Default retention of new objects (only with object_lock)."""
+    accept_object_lock_terms: bool = False
+    """Must be True with object_lock: you accept the Object Lock terms."""
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"name": self.name, "tier": self.tier}
         if self.project_id is not None:
             d["project_id"] = self.project_id
-        if self.versioning:
+        if self.versioning or self.object_lock:
             d["versioning"] = True
+        if self.object_lock:
+            d["object_lock"] = True
+        if self.object_lock_default is not None:
+            d["object_lock_default"] = self.object_lock_default.to_dict()
+        if self.accept_object_lock_terms:
+            d["accept_object_lock_terms"] = True
         return d
+
+
+@dataclass
+class SetObjectStorageObjectLockRequest:
+    default_retention: ObjectStorageLockRetention | None = None
+    """The new default retention, or None to remove it (a compliance rule can only be kept or
+    lengthened)."""
+    accept_object_lock_terms: bool = False
+    """Required (True) when the change turns compliance on or lengthens the retention."""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "default_retention": self.default_retention.to_dict() if self.default_retention else None,
+            "accept_object_lock_terms": self.accept_object_lock_terms,
+        }
 
 
 @dataclass
@@ -193,11 +271,13 @@ class CreateObjectStorageBucketResponse:
     tier: ObjectStorageTierSummary = field(default_factory=ObjectStorageTierSummary)
     region: str = ""
     endpoint: str = ""
+    object_lock: ObjectStorageObjectLock = field(default_factory=ObjectStorageObjectLock)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CreateObjectStorageBucketResponse:
         result: CreateObjectStorageBucketResponse = _simple(cls, data)
         result.tier = ObjectStorageTierSummary.from_dict(data.get("tier"))
+        result.object_lock = ObjectStorageObjectLock.from_dict(data.get("object_lock"))
         return result
 
 
@@ -241,6 +321,8 @@ class ObjectStorageAccessKey:
     endpoint: str = ""
     status: str = ""
     expires_at: str | None = None
+    bypass_governance: bool = False
+    """read_write keys only: may delete versions under governance retention."""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ObjectStorageAccessKey:
@@ -263,6 +345,9 @@ class CreateObjectStorageAccessKeyRequest:
     """Limit the key to these buckets; None gives it every bucket of the project in the tier."""
     expires_at: str | None = None
     """ISO 8601 date time in the future."""
+    bypass_governance: bool = False
+    """read_write keys only: the key may delete versions under governance retention (sending
+    x-amz-bypass-governance-retention: true). Cannot be changed later."""
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"name": self.name, "tier": self.tier, "permission": self.permission}
@@ -272,6 +357,8 @@ class CreateObjectStorageAccessKeyRequest:
             d["bucket_uuids"] = self.bucket_uuids
         if self.expires_at is not None:
             d["expires_at"] = self.expires_at
+        if self.bypass_governance:
+            d["bypass_governance"] = True
         return d
 
 

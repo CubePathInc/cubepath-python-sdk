@@ -10,6 +10,8 @@ from cubepath.models import (
     CreateCDNOriginRequest,
     CreateObjectStorageAccessKeyRequest,
     CreateObjectStorageBucketRequest,
+    ObjectStorageLockRetention,
+    SetObjectStorageObjectLockRequest,
     UpdateObjectStorageBucketRequest,
 )
 
@@ -90,7 +92,12 @@ def test_access_keys() -> None:
         )
     )
     assert created.secret_access_key == "secret" and created.bucket_scope is not None
-    assert body(calls[0]) == {"name": "web", "tier": "infrequent_access", "permission": "read_only", "bucket_uuids": ["b1"]}
+    assert body(calls[0]) == {
+        "name": "web",
+        "tier": "infrequent_access",
+        "permission": "read_only",
+        "bucket_uuids": ["b1"],
+    }
     keys = os.list_keys()
     assert keys[0].bucket_scope is not None and keys[0].bucket_scope[0].name == "photos"
     assert keys[1].bucket_scope is None
@@ -175,3 +182,71 @@ def test_bucket_metrics_not_found() -> None:
     else:
         raise AssertionError("expected APIError")
 
+
+def test_object_lock() -> None:
+    lock = {"enabled": True, "default_retention": {"mode": "governance", "days": 30, "years": None}}
+    client, calls = make_client(
+        {
+            "POST /object-storage/buckets": {"uuid": "b1", "status": "pending", "tier": TIER, "object_lock": lock},
+            "GET /object-storage/buckets": [
+                {"uuid": "b1", "tier": TIER, "object_lock": lock, "locked_content_kept": True},
+                {"uuid": "b2", "tier": TIER, "object_lock": {"enabled": False, "default_retention": None}},
+            ],
+            "GET /object-storage/buckets/b1": {"uuid": "b1", "tier": TIER, "object_lock": lock},
+        }
+    )
+    os = client.object_storage
+    created = os.create_bucket(
+        CreateObjectStorageBucketRequest(
+            name="vault",
+            tier="infrequent_access",
+            object_lock=True,
+            object_lock_default=ObjectStorageLockRetention(mode="governance", days=30),
+            accept_object_lock_terms=True,
+        )
+    )
+    assert body(calls[0]) == {
+        "name": "vault",
+        "tier": "infrequent_access",
+        "versioning": True,
+        "object_lock": True,
+        "object_lock_default": {"mode": "governance", "days": 30},
+        "accept_object_lock_terms": True,
+    }
+    assert created.object_lock.enabled and created.object_lock.default_retention is not None
+    assert created.object_lock.default_retention.days == 30
+
+    listed = os.list_buckets()
+    assert listed[0].locked_content_kept is True and listed[0].object_lock.enabled is True
+    assert listed[1].object_lock.default_retention is None and listed[1].locked_content_kept is False
+    detail = os.get_bucket("b1")
+    rule = detail.object_lock.default_retention
+    assert rule is not None and rule.mode == "governance"
+
+    os.set_bucket_object_lock(
+        "b1",
+        SetObjectStorageObjectLockRequest(
+            default_retention=ObjectStorageLockRetention(mode="compliance", years=1), accept_object_lock_terms=True
+        ),
+    )
+    assert calls[3].method == "PUT" and calls[3].url.path == "/object-storage/buckets/b1/object-lock"
+    assert body(calls[3]) == {"default_retention": {"mode": "compliance", "years": 1}, "accept_object_lock_terms": True}
+    os.set_bucket_object_lock("b1", SetObjectStorageObjectLockRequest())
+    assert body(calls[4]) == {"default_retention": None, "accept_object_lock_terms": False}
+
+    os.delete_bucket("b1", force=True, bypass_governance=True)
+    assert calls[5].url.params == httpx.QueryParams({"force": "true", "bypass_governance": "true"})
+
+
+def test_access_key_bypass_governance() -> None:
+    client, calls = make_client({"POST /object-storage/keys": {"uuid": "k1", "tier": TIER, "bypass_governance": True}})
+    created = client.object_storage.create_key(
+        CreateObjectStorageAccessKeyRequest(name="veeam", tier="infrequent_access", bypass_governance=True)
+    )
+    assert created.bypass_governance is True
+    assert body(calls[0]) == {
+        "name": "veeam",
+        "tier": "infrequent_access",
+        "permission": "read_write",
+        "bypass_governance": True,
+    }

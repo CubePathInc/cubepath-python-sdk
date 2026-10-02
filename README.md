@@ -209,6 +209,48 @@ client.object_storage.delete_key(key.uuid)
 client.object_storage.delete_bucket(bucket.uuid, force=True)  # force purges the content first
 ```
 
+#### Object Lock
+
+Object Lock (WORM) keeps object versions from being deleted or overwritten until their
+retention date. It can only be enabled when the bucket is created, never later; the bucket
+always keeps versioning enabled and is created with deletion protection on.
+
+- `governance`: keys created with `bypass_governance` can still delete a version early (sending
+  `x-amz-bypass-governance-retention: true`).
+- `compliance`: nobody can delete a version or shorten its retention before the date, CubePath
+  included. Only organizations that support enabled for it can use it.
+
+```python
+from cubepath.models import ObjectStorageLockRetention, SetObjectStorageObjectLockRequest
+
+vault = client.object_storage.create_bucket(CreateObjectStorageBucketRequest(
+    name="veeam-repo",
+    tier="infrequent_access",
+    object_lock=True,  # implies versioning
+    object_lock_default=ObjectStorageLockRetention(mode="governance", days=30),  # or years=
+    accept_object_lock_terms=True,
+))
+print(vault.object_lock.enabled)
+
+# Change the default retention (a compliance rule can only be kept or lengthened).
+# accept_object_lock_terms is needed when the rule turns compliance on or gets longer.
+client.object_storage.set_bucket_object_lock(vault.uuid, SetObjectStorageObjectLockRequest(
+    default_retention=ObjectStorageLockRetention(mode="governance", years=1),
+    accept_object_lock_terms=True,
+))
+client.object_storage.set_bucket_object_lock(vault.uuid, SetObjectStorageObjectLockRequest())  # remove it
+
+# A key that may delete governance versions early (read_write only)
+client.object_storage.create_key(CreateObjectStorageAccessKeyRequest(
+    name="veeam", tier="infrequent_access", permission="read_write", bypass_governance=True,
+))
+
+# Delete: disable protection first. bypass_governance (with force) also purges governance
+# versions. Versions under compliance or a legal hold are kept: the bucket stays with
+# locked_content_kept set and keeps being billed until their retention ends.
+client.object_storage.delete_bucket(vault.uuid, force=True, bypass_governance=True)
+```
+
 #### Presigned URLs
 
 This SDK talks to the CubePath API, not to S3. To share one object for a while, sign a
