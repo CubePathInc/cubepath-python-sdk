@@ -277,11 +277,12 @@ rule = client.object_storage.create_event_rule(
 )  # rule.status is "pending" until applied, then "active"
 
 client.object_storage.test_event_destination(created.destination.uuid)  # sends a cubepath.ping
-failed = client.object_storage.list_event_deliveries(created.destination.uuid, status="failed", limit=20)
+page = client.object_storage.list_event_deliveries(created.destination.uuid, status="failed", limit=20)
+# Older page: before=page.next_before (unix milliseconds) while it is not None.
 ```
 
 Verify every webhook delivery before trusting it, against the raw body. `CubePath-Signature`
-holds one or more `v1=<hex>` values, each the HMAC-SHA256 of `CubePath-Timestamp + "." + body`;
+holds one or more `v1=<hex>` values (`v1=<new>, v1=<previous>` for 24 hours after a rotation), each the HMAC-SHA256 of `CubePath-Timestamp + "." + body`;
 `verify_storage_event_signature` compares them in constant time and rejects timestamps more than
 5 minutes away:
 

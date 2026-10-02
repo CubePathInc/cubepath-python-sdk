@@ -29,8 +29,8 @@ def verify_storage_event_signature(
 
     ``secret`` is the signing secret of the destination, ``timestamp`` the CubePath-Timestamp
     header (unix seconds), ``body`` the raw request body (verify before parsing it) and ``header``
-    the CubePath-Signature header: one or more ``v1=<hex>`` values (several during a secret
-    rotation), each the HMAC-SHA256 of ``timestamp + "." + body``. Deliveries whose timestamp is
+    the CubePath-Signature header: one or more ``v1=<hex>`` values (``v1=<new>, v1=<previous>``
+    during a secret rotation), each the HMAC-SHA256 of ``timestamp + "." + body``. Deliveries whose timestamp is
     further than ``tolerance`` seconds (default 300) from now are rejected; 0 skips that check.
 
     Raises StorageEventSignatureError when the delivery is not valid.

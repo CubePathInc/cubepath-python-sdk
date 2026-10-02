@@ -32,6 +32,8 @@ __all__ = [
     "ObjectStorageEventRule",
     "CreateObjectStorageEventRuleRequest",
     "UpdateObjectStorageEventRuleRequest",
+    "ObjectStorageEventDelivery",
+    "ObjectStorageEventDeliveries",
 ]
 
 
@@ -543,10 +545,13 @@ class ObjectStorageEventDestination:
     status: str = ""
     """active, disabled, auto_disabled or deleted."""
     disabled_reason: str | None = None
+    previous_secret_expires_at: str | None = None
+    """Until when the secret before the last rotation still signs."""
     last_success_at: str | None = None
     last_failure_at: str | None = None
     last_error: str | None = None
     rules_count: int = 0
+    created_at: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageEventDestination:
@@ -561,12 +566,15 @@ class ObjectStorageEventDestinationSecret:
 
     destination: ObjectStorageEventDestination = field(default_factory=ObjectStorageEventDestination)
     signing_secret: str | None = None
+    previous_secret_expires_at: str | None = None
+    """Only after a rotation: the previous secret signs until then."""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ObjectStorageEventDestinationSecret:
         return cls(
             destination=ObjectStorageEventDestination.from_dict(data.get("destination")),
             signing_secret=data.get("signing_secret"),
+            previous_secret_expires_at=data.get("previous_secret_expires_at"),
         )
 
 
@@ -611,13 +619,14 @@ class ObjectStorageEventRule:
     name: str = ""
     bucket_uuid: str = ""
     destination: dict[str, Any] = field(default_factory=dict)
-    """{"uuid", "name", "type"}."""
+    """{"uuid", "name", "type"}, empty when unknown."""
     events: list[str] = field(default_factory=list)
     prefix: str = ""
     suffix: str = ""
     enabled: bool = True
     status: str = ""
     error_message: str | None = None
+    created_at: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageEventRule:
@@ -625,6 +634,48 @@ class ObjectStorageEventRule:
         result.destination = dict(result.destination or {})
         result.events = list(result.events or [])
         return result
+
+
+@dataclass
+class ObjectStorageEventDelivery:
+    """One delivery attempt. status: success, failed (retried later) or dead (given up)."""
+
+    ts: str = ""
+    ts_ms: int = 0
+    event_id: str = ""
+    delivery_id: str = ""
+    event_type: str = ""
+    bucket_uuid: str = ""
+    bucket_name: str | None = None
+    rule_uuid: str = ""
+    object_key: str = ""
+    attempt: int = 0
+    status: str = ""
+    http_status: int = 0
+    latency_ms: int = 0
+    error: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageEventDelivery:
+        result: ObjectStorageEventDelivery = _simple(cls, data)
+        return result
+
+
+@dataclass
+class ObjectStorageEventDeliveries:
+    """A page of the delivery history, newest first. Pass next_before as before for the next
+    (older) page; None on the last page."""
+
+    deliveries: list[ObjectStorageEventDelivery] = field(default_factory=list)
+    next_before: int | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageEventDeliveries:
+        data = data or {}
+        return cls(
+            deliveries=[ObjectStorageEventDelivery.from_dict(d) for d in data.get("deliveries") or []],
+            next_before=data.get("next_before"),
+        )
 
 
 @dataclass

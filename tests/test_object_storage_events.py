@@ -49,7 +49,12 @@ def test_event_routes() -> None:
                 "destination": DEST,
                 "signing_secret": "whsec_y",
             },
-            "GET /object-storage/event-destinations/d1/deliveries": [{"id": "dl1"}],
+            "GET /object-storage/event-destinations/d1/deliveries": {
+                "deliveries": [
+                    {"ts_ms": 1790964001250, "bucket_name": "photos", "status": "failed", "http_status": 500}
+                ],
+                "next_before": 1790964001250,
+            },
             "POST /object-storage/buckets/b1/event-rules": {
                 "uuid": "r1",
                 "bucket_uuid": "b1",
@@ -69,7 +74,9 @@ def test_event_routes() -> None:
     os.update_event_destination("d1", UpdateObjectStorageEventDestinationRequest(enabled=False))
     assert os.rotate_event_destination_secret("d1").signing_secret == "whsec_y"
     os.test_event_destination("d1")
-    assert os.list_event_deliveries("d1", status="failed", limit=10) == [{"id": "dl1"}]
+    page = os.list_event_deliveries("d1", status="failed", limit=10, before=1790964001251)
+    assert page.next_before == 1790964001250 and page.deliveries[0].bucket_name == "photos"
+    assert page.deliveries[0].http_status == 500 and page.deliveries[0].error == ""
     os.delete_event_destination("d1")
     os.list_event_rules("b1")
     rule = os.create_event_rule(
@@ -95,7 +102,7 @@ def test_event_routes() -> None:
     ]
     assert json.loads(calls[0].content) == {"name": "hook", "type": "webhook", "url": "https://example.com/h"}
     assert json.loads(calls[3].content) == {"enabled": False}
-    assert calls[6].url.params == httpx.QueryParams({"status": "failed", "limit": "10"})
+    assert calls[6].url.params == httpx.QueryParams({"status": "failed", "limit": "10", "before": "1790964001251"})
     assert json.loads(calls[9].content) == {
         "name": "r",
         "destination_uuid": "d1",
@@ -111,6 +118,8 @@ def test_event_routes() -> None:
         (SECRET, BODY, f"v1={SIG}"),
         (SECRET, BODY.encode(), f"v1={PREV_SIG},v1={SIG}"),
         ("whsec_previous", BODY, f"v1={SIG}, v1={PREV_SIG}"),
+        # The exact form the service sends during a rotation.
+        (SECRET, BODY, f"v1={SIG}, v1={PREV_SIG}"),
     ],
 )
 def test_signature_valid(secret: str, body: Any, header: str) -> None:

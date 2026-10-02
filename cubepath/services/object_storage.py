@@ -13,6 +13,7 @@ from cubepath.models.object_storage import (
     ObjectStorageAccessKey,
     ObjectStorageBucket,
     ObjectStorageBucketDetail,
+    ObjectStorageEventDeliveries,
     ObjectStorageEventDestination,
     ObjectStorageEventDestinationSecret,
     ObjectStorageEventRule,
@@ -139,24 +140,26 @@ class ObjectStorageService:
         return ObjectStorageEventDestinationSecret.from_dict(data)
 
     def test_event_destination(self, uuid: str) -> None:
-        """Send a cubepath.ping event to the destination."""
+        """Deliver a cubepath.ping now (the destination must be active); the outcome shows up in
+        the delivery history."""
         self._client.post(f"/object-storage/event-destinations/{uuid}/test")
 
     def list_event_deliveries(
-        self, uuid: str, *, status: str | None = None, limit: int | None = None, before: str | None = None
-    ) -> list[dict[str, Any]]:
-        """Delivery history of a destination; status is success, failed or dead."""
+        self, uuid: str, *, status: str | None = None, limit: int | None = None, before: int | None = None
+    ) -> ObjectStorageEventDeliveries:
+        """A page of the delivery history, newest first. status is success, failed or dead; limit 1
+        to 200 (default 50); before is unix milliseconds: pass next_before of the previous page."""
         params: dict[str, Any] = {}
         if status:
             params["status"] = status
         if limit is not None:
             params["limit"] = limit
-        if before:
+        if before is not None:
             params["before"] = before
-        data: list[dict[str, Any]] = self._client.get(
+        data: dict[str, Any] = self._client.get(
             f"/object-storage/event-destinations/{uuid}/deliveries", params=params or None
         )
-        return data
+        return ObjectStorageEventDeliveries.from_dict(data)
 
     def list_event_rules(self, bucket_uuid: str) -> list[ObjectStorageEventRule]:
         data: list[dict[str, Any]] = self._client.get(f"/object-storage/buckets/{bucket_uuid}/event-rules")
