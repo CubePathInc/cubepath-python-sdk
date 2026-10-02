@@ -250,3 +250,18 @@ def test_access_key_bypass_governance() -> None:
         "permission": "read_write",
         "bypass_governance": True,
     }
+
+
+def test_bucket_encryption() -> None:
+    client, _calls = make_client(
+        {
+            "GET /object-storage/buckets": [
+                {"uuid": "b1", "tier": TIER, "encryption": {"algorithm": "AES256", "scope": "new_objects"}},
+                {"uuid": "b2", "tier": TIER, "encryption": None},
+            ],
+        }
+    )
+    buckets = client.object_storage.list_buckets()
+    assert buckets[0].encryption is not None
+    assert (buckets[0].encryption.algorithm, buckets[0].encryption.scope) == ("AES256", "new_objects")
+    assert buckets[1].encryption is None

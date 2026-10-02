@@ -113,6 +113,23 @@ class ObjectStorageObjectLock:
 
 
 @dataclass
+class ObjectStorageBucketEncryption:
+    """Encryption at rest of a bucket: ``algorithm`` "AES256" (SSE-S3) and ``scope``
+    "all_objects", or "new_objects" while objects written before the bucket default may still be
+    stored unencrypted."""
+
+    algorithm: str = "AES256"
+    scope: str = "all_objects"
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageBucketEncryption | None:
+        if not data:
+            return None
+        result: ObjectStorageBucketEncryption = _simple(cls, data)
+        return result
+
+
+@dataclass
 class ObjectStorageBucket:
     uuid: str = ""
     name: str = ""
@@ -137,12 +154,15 @@ class ObjectStorageBucket:
     locked_content_kept: bool = False
     """The last delete left versions protected by Object Lock (retention or legal hold): the
     bucket stays and keeps being billed until they expire. Cleared by the next delete."""
+    encryption: ObjectStorageBucketEncryption | None = None
+    """Encryption at rest; None until the bucket default is applied."""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ObjectStorageBucket:
         result: ObjectStorageBucket = _simple(cls, data)
         result.tier = ObjectStorageTierSummary.from_dict(data.get("tier"))
         result.object_lock = ObjectStorageObjectLock.from_dict(data.get("object_lock"))
+        result.encryption = ObjectStorageBucketEncryption.from_dict(data.get("encryption"))
         return result
 
 
