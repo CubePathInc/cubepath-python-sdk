@@ -25,6 +25,13 @@ __all__ = [
     "ObjectStorageTierUsage",
     "ObjectStorageBucketUsageRow",
     "ObjectStorageUsage",
+    "ObjectStorageEventDestination",
+    "ObjectStorageEventDestinationSecret",
+    "CreateObjectStorageEventDestinationRequest",
+    "UpdateObjectStorageEventDestinationRequest",
+    "ObjectStorageEventRule",
+    "CreateObjectStorageEventRuleRequest",
+    "UpdateObjectStorageEventRuleRequest",
 ]
 
 
@@ -516,3 +523,142 @@ class ObjectStorageLifecycleChange:
         result: ObjectStorageLifecycleChange = _simple(cls, data)
         result.notes = list(data.get("notes") or [])
         return result
+
+
+# ── Event notifications ──────────────────────────────────────────
+
+
+@dataclass
+class ObjectStorageEventDestination:
+    """Where bucket events are delivered: a signed webhook ("webhook") or a Cloud Alerts channel
+    ("notificator"). The webhook URL is never returned in clear (url_masked)."""
+
+    uuid: str = ""
+    name: str = ""
+    type: str = ""
+    url_masked: str | None = None
+    notificator: dict[str, Any] | None = None
+    """{"id", "name", "type"} of the channel of a "notificator" destination."""
+    payload_format: str = "cubepath"
+    status: str = ""
+    """active, disabled, auto_disabled or deleted."""
+    disabled_reason: str | None = None
+    last_success_at: str | None = None
+    last_failure_at: str | None = None
+    last_error: str | None = None
+    rules_count: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageEventDestination:
+        result: ObjectStorageEventDestination = _simple(cls, data)
+        return result
+
+
+@dataclass
+class ObjectStorageEventDestinationSecret:
+    """Answer of create and rotate-secret, the only calls that return the signing secret
+    (None for a channel destination)."""
+
+    destination: ObjectStorageEventDestination = field(default_factory=ObjectStorageEventDestination)
+    signing_secret: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ObjectStorageEventDestinationSecret:
+        return cls(
+            destination=ObjectStorageEventDestination.from_dict(data.get("destination")),
+            signing_secret=data.get("signing_secret"),
+        )
+
+
+@dataclass
+class CreateObjectStorageEventDestinationRequest:
+    name: str
+    type: str
+    """"webhook" (with url) or "notificator" (with notificator_id, a Cloud Alerts channel)."""
+    url: str | None = None
+    notificator_id: str | None = None
+    payload_format: str | None = None
+    """"cubepath" (default) or "s3"."""
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"name": self.name, "type": self.type}
+        if self.url is not None:
+            d["url"] = self.url
+        if self.notificator_id is not None:
+            d["notificator_id"] = self.notificator_id
+        if self.payload_format is not None:
+            d["payload_format"] = self.payload_format
+        return d
+
+
+@dataclass
+class UpdateObjectStorageEventDestinationRequest:
+    name: str | None = None
+    url: str | None = None
+    payload_format: str | None = None
+    enabled: bool | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {k: v for k, v in self.__dict__.items() if v is not None}
+
+
+@dataclass
+class ObjectStorageEventRule:
+    """Sends a bucket's events of the listed types whose key matches prefix and suffix to a
+    destination. Applied asynchronously: status goes from "pending" to "active"."""
+
+    uuid: str = ""
+    name: str = ""
+    bucket_uuid: str = ""
+    destination: dict[str, Any] = field(default_factory=dict)
+    """{"uuid", "name", "type"}."""
+    events: list[str] = field(default_factory=list)
+    prefix: str = ""
+    suffix: str = ""
+    enabled: bool = True
+    status: str = ""
+    error_message: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageEventRule:
+        result: ObjectStorageEventRule = _simple(cls, data)
+        result.destination = dict(result.destination or {})
+        result.events = list(result.events or [])
+        return result
+
+
+@dataclass
+class CreateObjectStorageEventRuleRequest:
+    name: str
+    destination_uuid: str
+    events: list[str]
+    """object.created, object.removed and/or object.tagging."""
+    prefix: str = ""
+    suffix: str = ""
+    enabled: bool = True
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "name": self.name,
+            "destination_uuid": self.destination_uuid,
+            "events": list(self.events),
+            "enabled": self.enabled,
+        }
+        if self.prefix:
+            d["prefix"] = self.prefix
+        if self.suffix:
+            d["suffix"] = self.suffix
+        return d
+
+
+@dataclass
+class UpdateObjectStorageEventRuleRequest:
+    name: str | None = None
+    destination_uuid: str | None = None
+    events: list[str] | None = None
+    prefix: str | None = None
+    suffix: str | None = None
+    enabled: bool | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {k: v for k, v in self.__dict__.items() if v is not None}

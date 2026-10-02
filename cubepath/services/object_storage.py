@@ -8,15 +8,22 @@ from cubepath.models.object_storage import (
     CreateObjectStorageAccessKeyResponse,
     CreateObjectStorageBucketRequest,
     CreateObjectStorageBucketResponse,
+    CreateObjectStorageEventDestinationRequest,
+    CreateObjectStorageEventRuleRequest,
     ObjectStorageAccessKey,
     ObjectStorageBucket,
     ObjectStorageBucketDetail,
+    ObjectStorageEventDestination,
+    ObjectStorageEventDestinationSecret,
+    ObjectStorageEventRule,
     ObjectStorageLifecycle,
     ObjectStorageLifecycleChange,
     ObjectStorageTier,
     ObjectStorageUsage,
     SetObjectStorageObjectLockRequest,
     UpdateObjectStorageBucketRequest,
+    UpdateObjectStorageEventDestinationRequest,
+    UpdateObjectStorageEventRuleRequest,
 )
 
 if TYPE_CHECKING:
@@ -97,6 +104,81 @@ class ObjectStorageService:
         """Remove every lifecycle rule of the bucket."""
         data: dict[str, Any] = self._client.delete(f"/object-storage/buckets/{uuid}/lifecycle")
         return ObjectStorageLifecycleChange.from_dict(data or {})
+
+    # ── Event notifications ──────────────────────────────────────
+
+    def list_event_destinations(self) -> list[ObjectStorageEventDestination]:
+        data: list[dict[str, Any]] = self._client.get("/object-storage/event-destinations")
+        return [ObjectStorageEventDestination.from_dict(d) for d in data]
+
+    def create_event_destination(
+        self, req: CreateObjectStorageEventDestinationRequest
+    ) -> ObjectStorageEventDestinationSecret:
+        """Create a destination. The signing secret is only returned here and by
+        rotate_event_destination_secret: store it."""
+        data: dict[str, Any] = self._client.post("/object-storage/event-destinations", json=req.to_dict())
+        return ObjectStorageEventDestinationSecret.from_dict(data)
+
+    def get_event_destination(self, uuid: str) -> ObjectStorageEventDestination:
+        data: dict[str, Any] = self._client.get(f"/object-storage/event-destinations/{uuid}")
+        return ObjectStorageEventDestination.from_dict(data)
+
+    def update_event_destination(
+        self, uuid: str, req: UpdateObjectStorageEventDestinationRequest
+    ) -> ObjectStorageEventDestination:
+        data: dict[str, Any] = self._client.patch(f"/object-storage/event-destinations/{uuid}", json=req.to_dict())
+        return ObjectStorageEventDestination.from_dict(data)
+
+    def delete_event_destination(self, uuid: str) -> None:
+        """Delete a destination without rules."""
+        self._client.delete(f"/object-storage/event-destinations/{uuid}")
+
+    def rotate_event_destination_secret(self, uuid: str) -> ObjectStorageEventDestinationSecret:
+        """Issue a new signing secret; the previous one keeps signing for 24 hours."""
+        data: dict[str, Any] = self._client.post(f"/object-storage/event-destinations/{uuid}/rotate-secret")
+        return ObjectStorageEventDestinationSecret.from_dict(data)
+
+    def test_event_destination(self, uuid: str) -> None:
+        """Send a cubepath.ping event to the destination."""
+        self._client.post(f"/object-storage/event-destinations/{uuid}/test")
+
+    def list_event_deliveries(
+        self, uuid: str, *, status: str | None = None, limit: int | None = None, before: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Delivery history of a destination; status is success, failed or dead."""
+        params: dict[str, Any] = {}
+        if status:
+            params["status"] = status
+        if limit is not None:
+            params["limit"] = limit
+        if before:
+            params["before"] = before
+        data: list[dict[str, Any]] = self._client.get(
+            f"/object-storage/event-destinations/{uuid}/deliveries", params=params or None
+        )
+        return data
+
+    def list_event_rules(self, bucket_uuid: str) -> list[ObjectStorageEventRule]:
+        data: list[dict[str, Any]] = self._client.get(f"/object-storage/buckets/{bucket_uuid}/event-rules")
+        return [ObjectStorageEventRule.from_dict(r) for r in data]
+
+    def create_event_rule(self, bucket_uuid: str, req: CreateObjectStorageEventRuleRequest) -> ObjectStorageEventRule:
+        """Create a rule; it is applied asynchronously (status "pending", then "active")."""
+        data: dict[str, Any] = self._client.post(
+            f"/object-storage/buckets/{bucket_uuid}/event-rules", json=req.to_dict()
+        )
+        return ObjectStorageEventRule.from_dict(data)
+
+    def update_event_rule(
+        self, bucket_uuid: str, rule_uuid: str, req: UpdateObjectStorageEventRuleRequest
+    ) -> ObjectStorageEventRule:
+        data: dict[str, Any] = self._client.patch(
+            f"/object-storage/buckets/{bucket_uuid}/event-rules/{rule_uuid}", json=req.to_dict()
+        )
+        return ObjectStorageEventRule.from_dict(data)
+
+    def delete_event_rule(self, bucket_uuid: str, rule_uuid: str) -> None:
+        self._client.delete(f"/object-storage/buckets/{bucket_uuid}/event-rules/{rule_uuid}")
 
     # ── Access keys ──────────────────────────────────────────────
 

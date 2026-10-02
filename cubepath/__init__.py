@@ -2,6 +2,7 @@
 
 from cubepath.client import CubePathClient
 from cubepath.exceptions import APIError, is_bad_request, is_conflict, is_not_found, is_rate_limited
+from cubepath.webhooks import StorageEventSignatureError, verify_storage_event_signature
 
 __all__ = [
     "CubePathClient",
@@ -10,6 +11,8 @@ __all__ = [
     "is_conflict",
     "is_rate_limited",
     "is_bad_request",
+    "verify_storage_event_signature",
+    "StorageEventSignatureError",
 ]
 
 __version__ = "0.7.0"
