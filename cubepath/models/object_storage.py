@@ -9,6 +9,8 @@ __all__ = [
     "ObjectStorageLockRetention",
     "ObjectStorageObjectLock",
     "ObjectStorageBucket",
+    "ObjectStorageBucketEncryption",
+    "ObjectStorageEncryptionChange",
     "ObjectStorageBucketConnection",
     "ObjectStorageBucketUsage",
     "ObjectStorageBucketCDN",
@@ -120,6 +122,8 @@ class ObjectStorageBucketEncryption:
 
     algorithm: str = "AES256"
     scope: str = "all_objects"
+    applied_at: str | None = None
+    """When encryption was turned on for the bucket (UTC, ISO 8601)."""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageBucketEncryption | None:
@@ -155,7 +159,7 @@ class ObjectStorageBucket:
     """The last delete left versions protected by Object Lock (retention or legal hold): the
     bucket stays and keeps being billed until they expire. Cleared by the next delete."""
     encryption: ObjectStorageBucketEncryption | None = None
-    """Encryption at rest; None until the bucket default is applied."""
+    """Encryption at rest; None while it is off."""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ObjectStorageBucket:
@@ -250,9 +254,14 @@ class CreateObjectStorageBucketRequest:
     """Default retention of new objects (only with object_lock)."""
     accept_object_lock_terms: bool = False
     """Must be True with object_lock: you accept the Object Lock terms."""
+    encryption: bool = True
+    """Encryption at rest (AES-256). False creates the bucket without it: it can be enabled later
+    (enable_bucket_encryption), never turned off."""
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"name": self.name, "tier": self.tier}
+        if not self.encryption:
+            d["encryption"] = False
         if self.project_id is not None:
             d["project_id"] = self.project_id
         if self.versioning or self.object_lock:
@@ -500,6 +509,20 @@ class ObjectStorageLifecycle:
         result.rules = list(data.get("rules") or [])
         result.platform_rules = list(data.get("platform_rules") or [])
         result.notes = list(data.get("notes") or [])
+        return result
+
+
+@dataclass
+class ObjectStorageEncryptionChange:
+    """Answer of enable_bucket_encryption: reencrypt_job_id is set when the objects already
+    stored are being encrypted in the background."""
+
+    detail: str = ""
+    reencrypt_job_id: int | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ObjectStorageEncryptionChange:
+        result: ObjectStorageEncryptionChange = _simple(cls, data)
         return result
 
 
