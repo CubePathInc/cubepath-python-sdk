@@ -13,6 +13,7 @@ from cubepath.models.object_storage import (
     ObjectStorageBucketDetail,
     ObjectStorageTier,
     ObjectStorageUsage,
+    SetObjectStorageObjectLockRequest,
     UpdateObjectStorageBucketRequest,
 )
 
@@ -61,10 +62,22 @@ class ObjectStorageService:
     def update_bucket(self, uuid: str, req: UpdateObjectStorageBucketRequest) -> None:
         self._client.patch(f"/object-storage/buckets/{uuid}", json=req.to_dict())
 
-    def delete_bucket(self, uuid: str, *, force: bool = False) -> None:
+    def set_bucket_object_lock(self, uuid: str, req: SetObjectStorageObjectLockRequest) -> None:
+        """Change or remove (default_retention None) the default retention of a bucket created with
+        Object Lock. Object Lock itself can only be enabled when the bucket is created."""
+        self._client.put(f"/object-storage/buckets/{uuid}/object-lock", json=req.to_dict())
+
+    def delete_bucket(self, uuid: str, *, force: bool = False, bypass_governance: bool = False) -> None:
         """Delete a bucket asynchronously. Without force only an empty bucket is deleted;
-        with force every object and version is purged first."""
-        self._client.delete(f"/object-storage/buckets/{uuid}", params={"force": "true"} if force else None)
+        with force every object and version is purged first. bypass_governance (only with force)
+        also deletes versions under governance retention; versions under compliance or a legal
+        hold are kept and the bucket comes back with locked_content_kept set."""
+        params: dict[str, Any] = {}
+        if force:
+            params["force"] = "true"
+        if bypass_governance:
+            params["bypass_governance"] = "true"
+        self._client.delete(f"/object-storage/buckets/{uuid}", params=params or None)
 
     # ── Access keys ──────────────────────────────────────────────
 
