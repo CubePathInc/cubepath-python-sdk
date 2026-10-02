@@ -364,3 +364,48 @@ class ObjectStorageUsage:
         result.buckets = [ObjectStorageBucketUsageRow.from_dict(b) for b in data.get("buckets", [])]
         result.available_months = list(data.get("available_months", []))
         return result
+
+
+@dataclass
+class ObjectStorageLifecycle:
+    """Lifecycle of a bucket. status: none, pending, active, paused (bucket blocked or on hold)
+    or error. rules are dicts in the API format: {"id", "enabled", "filter", "expiration",
+    "noncurrent_version_expiration", "abort_incomplete_multipart_upload"}."""
+
+    bucket_uuid: str = ""
+    status: str = "none"
+    rules: list[dict[str, Any]] = field(default_factory=list)
+    platform_rules: list[dict[str, Any]] = field(default_factory=list)
+    generation: int = 0
+    applied_generation: int = 0
+    error: str | None = None
+    updated_at: str | None = None
+    notes: list[str] = field(default_factory=list)
+
+    @property
+    def applied(self) -> bool:
+        """Whether the latest change of the rules reached the storage service."""
+        return self.applied_generation >= self.generation
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ObjectStorageLifecycle:
+        result: ObjectStorageLifecycle = _simple(cls, data)
+        result.rules = list(data.get("rules") or [])
+        result.platform_rules = list(data.get("platform_rules") or [])
+        result.notes = list(data.get("notes") or [])
+        return result
+
+
+@dataclass
+class ObjectStorageLifecycleChange:
+    """Answer of put/delete_bucket_lifecycle; generation is None when nothing changed."""
+
+    detail: str = ""
+    generation: int | None = None
+    notes: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ObjectStorageLifecycleChange:
+        result: ObjectStorageLifecycleChange = _simple(cls, data)
+        result.notes = list(data.get("notes") or [])
+        return result
