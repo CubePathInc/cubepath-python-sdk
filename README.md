@@ -196,6 +196,10 @@ print(key.access_key_id, key.secret_access_key, key.endpoint, key.region)
 
 usage = client.object_storage.get_usage(period="2026-09")
 
+# Charts of one bucket (GraphQL): stored size and objects, traffic and responses per step
+# over H1, H3, H6, H12, H24 (default), D3, D7 or D30
+metrics = client.object_storage.get_bucket_metrics(bucket.uuid, "D7")
+
 # Buckets are private: serve one publicly through a CDN zone
 client.cdn.create_origin(zone.uuid, CreateCDNOriginRequest(
     name="my-bucket", weight=100, priority=1, object_storage_bucket_uuid=bucket.uuid,

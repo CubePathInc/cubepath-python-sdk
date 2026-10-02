@@ -128,3 +128,29 @@ def test_cdn_bucket_origin_sends_only_allowed_fields() -> None:
         "priority": 1,
         "is_backup": False,
     }
+
+
+def test_bucket_metrics_through_graphql() -> None:
+    part = {"start": 1, "end": 2, "step": 300, "series": []}
+    bucket = {"uuid": "b1", "name": "photos", "storageMeasuredAt": 1}
+    bucket.update({"storage": part, "traffic": part, "responses": part})
+    client, calls = make_client({"POST /graphql": {"data": {"objectStorageBucket": bucket}}})
+    assert client.object_storage.get_bucket_metrics("b1", "D7") == bucket
+    sent = body(calls[0])
+    assert sent["variables"] == {"uuid": "b1", "range": "D7"}
+    assert "objectStorageBucket(uuid: $uuid)" in sent["query"]
+    assert "responses(range: $range) { start end step series" in sent["query"]
+
+
+def test_bucket_metrics_not_found() -> None:
+    from cubepath.exceptions import APIError
+
+    errors = [{"message": "Resource not found.", "extensions": {"code": "NOT_FOUND"}}]
+    client, _ = make_client({"POST /graphql": {"data": {"objectStorageBucket": None}, "errors": errors}})
+    try:
+        client.object_storage.get_bucket_metrics("nope")
+    except APIError as exc:
+        assert exc.status_code == 404
+    else:
+        raise AssertionError("expected APIError")
+

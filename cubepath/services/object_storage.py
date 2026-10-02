@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from cubepath.exceptions import APIError
 from cubepath.models.object_storage import (
     CreateObjectStorageAccessKeyRequest,
     CreateObjectStorageAccessKeyResponse,
@@ -87,3 +88,28 @@ class ObjectStorageService:
         """Month usage and cost per tier and bucket. period is YYYY-MM, default the current month."""
         data: dict[str, Any] = self._client.get("/object-storage/usage", params=_filters(project_id, tier, period))
         return ObjectStorageUsage.from_dict(data)
+
+    # ── Charts ───────────────────────────────────────────────────
+
+    def get_bucket_metrics(self, uuid: str, time_range: str = "H24") -> dict[str, Any]:
+        """Chart series of a bucket, served through GraphQL.
+
+        ``time_range`` is H1, H3, H6, H12, H24, D3, D7 or D30. Returns ``{"uuid", "name",
+        "storageMeasuredAt", "storage", "traffic", "responses"}``, each part a MetricsResult
+        ``{"start", "end", "step", "series": [{"name", "unit", "points": [{"ts", "value"}]}]}``.
+        storage: size_bytes, objects (hourly); traffic: egress_bytes, cdn_bytes, ingress_bytes,
+        class_a_requests, class_b_requests, free_requests; responses: responses_2xx,
+        responses_3xx, responses_4xx, responses_5xx, responses_429, responses_other. Traffic and
+        responses are totals per step, not rates.
+        """
+        result = "start end step series { name unit points { ts value } }"
+        data = self._client.graphql(
+            "query($uuid: ID!, $range: TimeRange!) { objectStorageBucket(uuid: $uuid) { uuid name storageMeasuredAt "
+            f"storage(range: $range) {{ {result} }} traffic(range: $range) {{ {result} }} "
+            f"responses(range: $range) {{ {result} }} }} }}",
+            {"uuid": uuid, "range": time_range},
+        )
+        if not data.get("objectStorageBucket"):
+            raise APIError(404, "Not Found", f"Bucket {uuid} not found")
+        bucket: dict[str, Any] = data["objectStorageBucket"]
+        return bucket
