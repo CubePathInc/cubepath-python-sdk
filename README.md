@@ -206,7 +206,7 @@ client.object_storage.delete_bucket(bucket.uuid, force=True)  # force purges the
 ```
 
 Lifecycle rules delete objects in the background, permanently. `put_bucket_lifecycle` replaces every
-rule and is applied asynchronously (seconds, up to 10 minutes after a previous change of the same
+rule and is applied asynchronously (seconds, up to about 12 minutes after a previous change of the same
 bucket); objects go within 48 hours of their due date. In a versioned bucket an expiration only adds
 a delete marker: add a `noncurrent_version_expiration` rule to free space.
 
