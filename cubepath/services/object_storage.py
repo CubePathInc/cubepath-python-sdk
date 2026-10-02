@@ -11,6 +11,8 @@ from cubepath.models.object_storage import (
     ObjectStorageAccessKey,
     ObjectStorageBucket,
     ObjectStorageBucketDetail,
+    ObjectStorageLifecycle,
+    ObjectStorageLifecycleChange,
     ObjectStorageTier,
     ObjectStorageUsage,
     UpdateObjectStorageBucketRequest,
@@ -65,6 +67,23 @@ class ObjectStorageService:
         """Delete a bucket asynchronously. Without force only an empty bucket is deleted;
         with force every object and version is purged first."""
         self._client.delete(f"/object-storage/buckets/{uuid}", params={"force": "true"} if force else None)
+
+    # ── Lifecycle rules ──────────────────────────────────────────
+
+    def get_bucket_lifecycle(self, uuid: str) -> ObjectStorageLifecycle:
+        data: dict[str, Any] = self._client.get(f"/object-storage/buckets/{uuid}/lifecycle")
+        return ObjectStorageLifecycle.from_dict(data)
+
+    def put_bucket_lifecycle(self, uuid: str, rules: list[dict[str, Any]]) -> ObjectStorageLifecycleChange:
+        """Replace every lifecycle rule of the bucket (1 to 100). Expiration rules delete objects
+        permanently. Applied asynchronously: poll get_bucket_lifecycle until .applied."""
+        data: dict[str, Any] = self._client.put(f"/object-storage/buckets/{uuid}/lifecycle", json={"rules": rules})
+        return ObjectStorageLifecycleChange.from_dict(data)
+
+    def delete_bucket_lifecycle(self, uuid: str) -> ObjectStorageLifecycleChange:
+        """Remove every lifecycle rule of the bucket."""
+        data: dict[str, Any] = self._client.delete(f"/object-storage/buckets/{uuid}/lifecycle")
+        return ObjectStorageLifecycleChange.from_dict(data or {})
 
     # ── Access keys ──────────────────────────────────────────────
 

@@ -237,6 +237,20 @@ url = s3.generate_presigned_url(
 )
 ```
 
+Lifecycle rules delete objects in the background, permanently. `put_bucket_lifecycle` replaces every
+rule and is applied asynchronously (seconds, up to about 12 minutes after a previous change of the same
+bucket); objects go within 48 hours of their due date. In a versioned bucket an expiration only adds
+a delete marker: add a `noncurrent_version_expiration` rule to free space.
+
+```python
+change = client.object_storage.put_bucket_lifecycle(bucket.uuid, [
+    {"id": "logs-30d", "enabled": True, "filter": {"prefix": "logs/"}, "expiration": {"days": 30}},
+    {"id": "old-versions", "enabled": True, "noncurrent_version_expiration": {"noncurrent_days": 30}},
+])
+lifecycle = client.object_storage.get_bucket_lifecycle(bucket.uuid)  # lifecycle.applied once done
+client.object_storage.delete_bucket_lifecycle(bucket.uuid)
+```
+
 ### Managed Databases
 
 Databases are created asynchronously: poll `get()` until `status` is `active`. The plan

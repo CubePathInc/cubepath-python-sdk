@@ -130,6 +130,27 @@ def test_cdn_bucket_origin_sends_only_allowed_fields() -> None:
     }
 
 
+def test_bucket_lifecycle_rules() -> None:
+    path = "/object-storage/buckets/b1/lifecycle"
+    client, calls = make_client(
+        {
+            f"GET {path}": {"bucket_uuid": "b1", "status": "pending", "generation": 4, "applied_generation": 3,
+                            "rules": [{"id": "logs-30d", "enabled": True, "expiration": {"days": 30}}], "notes": ["n"]},
+            f"PUT {path}": {"detail": "Lifecycle rules are being applied", "generation": 5, "notes": []},
+            f"DELETE {path}": {"detail": "This bucket has no lifecycle rules"},
+        }
+    )
+    lifecycle = client.object_storage.get_bucket_lifecycle("b1")
+    assert not lifecycle.applied
+    assert lifecycle.rules[0]["id"] == "logs-30d"
+    rules = [{"id": "logs-30d", "enabled": True, "filter": {"prefix": "logs/"}, "expiration": {"days": 30}}]
+    change = client.object_storage.put_bucket_lifecycle("b1", rules)
+    assert change.generation == 5
+    assert calls[1].method == "PUT" and body(calls[1]) == {"rules": rules}
+    change = client.object_storage.delete_bucket_lifecycle("b1")
+    assert change.generation is None and calls[2].method == "DELETE" and calls[2].url.path == path
+
+
 def test_bucket_metrics_through_graphql() -> None:
     part = {"start": 1, "end": 2, "step": 300, "series": []}
     bucket = {"uuid": "b1", "name": "photos", "storageMeasuredAt": 1}
