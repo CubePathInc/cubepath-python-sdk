@@ -51,7 +51,7 @@ print(f"Task: {task.task_id}")
 | DNS | `client.dns` | DNS zones & records |
 | Load Balancer | `client.load_balancer` | Load balancers, listeners, targets |
 | CDN | `client.cdn` | CDN zones, origins, rules, WAF, cache purge, signed URLs, metrics |
-| Object Storage | `client.object_storage` | S3 compatible buckets, access keys, usage |
+| Object Storage | `client.object_storage` | S3 compatible buckets, access keys, replication, usage |
 | Kubernetes | `client.kubernetes` | K8s clusters, node pools, addons, metrics |
 | Managed Databases | `client.managed_databases` | Managed MySQL, Valkey and PostgreSQL |
 | Pricing | `client.pricing` | Pricing information |
@@ -249,6 +249,67 @@ client.object_storage.create_key(CreateObjectStorageAccessKeyRequest(
 # versions. Versions under compliance or a legal hold are kept: the bucket stays with
 # locked_content_kept set and keeps being billed until their retention ends.
 client.object_storage.delete_bucket(vault.uuid, force=True, bypass_governance=True)
+```
+
+#### Replication
+
+Replication copies every new object version of a source bucket to one destination, object by
+object and asynchronously: another CubePath bucket of the same tier, or an external S3 compatible
+bucket (AWS S3, Wasabi or another provider with versioning) over HTTPS on port 443 only.
+
+- Versioning must be enabled on the source (and on a CubePath destination) and cannot be suspended
+  while the bucket replicates. Buckets with Object Lock cannot be sources; a destination with
+  Object Lock is fine.
+- A CubePath destination lives on the same storage cluster as the source: it protects against
+  mistakes, not against the loss of the site, so it is not disaster recovery. For an off site copy
+  use an external destination.
+- Replication to an external destination is billed as egress of the source bucket (the initial copy
+  of existing objects included) and shares the organization's free egress. A CubePath destination
+  has no egress cost; the replicas are billed as storage of the destination bucket.
+- One destination per source bucket. A bucket cannot be a source and a destination at once.
+- To replicate into a bucket of another organization, its owner creates a one use grant and hands
+  you the token.
+
+```python
+from cubepath.models import (
+    CreateObjectStorageReplicationGrantRequest,
+    CreateObjectStorageReplicationRequest,
+    ObjectStorageReplicationDestinationRequest,
+    UpdateObjectStorageReplicationRequest,
+)
+
+# To a CubePath bucket (grant_token only for a bucket of another organization)
+repl = client.object_storage.create_replication(CreateObjectStorageReplicationRequest(
+    source_bucket_uuid=bucket.uuid,
+    destination=ObjectStorageReplicationDestinationRequest.cubepath(dest_bucket_uuid),
+    prefix="img/",           # or tags=[ObjectStorageReplicationTag(key="backup", value="yes")]
+    existing_objects=True,   # also copy what the bucket already holds
+))
+
+# To an external provider: the secret is never returned
+client.object_storage.create_replication(CreateObjectStorageReplicationRequest(
+    source_bucket_uuid=other_bucket.uuid,
+    destination=ObjectStorageReplicationDestinationRequest.external(
+        provider="aws", endpoint="s3.eu-west-1.amazonaws.com", region="eu-west-1",
+        bucket="acme-backup", access_key_id=os.environ["AWS_KEY"], secret_access_key=os.environ["AWS_SECRET"],
+    ),
+))
+
+detail = client.object_storage.get_replication(repl.uuid)  # status, health, backfill, metrics
+client.object_storage.list_replications(direction="outgoing")  # or "incoming", "all"
+client.object_storage.update_replication(repl.uuid, UpdateObjectStorageReplicationRequest(enabled=False))  # pause
+client.object_storage.update_replication(repl.uuid, UpdateObjectStorageReplicationRequest(clear_prefix=True))
+client.object_storage.resync_replication(repl.uuid, older_than_days=7)  # send existing objects again
+client.object_storage.delete_replication(repl.uuid)  # replicated data stays in the destination
+
+# Owner of the destination bucket, in the other organization
+grant = client.object_storage.create_replication_grant(
+    dest_bucket_uuid, CreateObjectStorageReplicationGrantRequest(note="for Acme", expires_in_days=7)
+)
+print(grant.token)  # shown only once
+client.object_storage.list_replication_grants(dest_bucket_uuid)
+client.object_storage.delete_replication_grant(grant.uuid)  # revoke while unused
+client.object_storage.revoke_replication(incoming_replication_uuid)  # stop an incoming replication
 ```
 
 #### Presigned URLs

@@ -4,15 +4,21 @@ import json
 from typing import Any
 
 import httpx
+import pytest
 
 from cubepath import CubePathClient
 from cubepath.models import (
     CreateCDNOriginRequest,
     CreateObjectStorageAccessKeyRequest,
     CreateObjectStorageBucketRequest,
+    CreateObjectStorageReplicationGrantRequest,
+    CreateObjectStorageReplicationRequest,
     ObjectStorageLockRetention,
+    ObjectStorageReplicationDestinationRequest,
+    ObjectStorageReplicationTag,
     SetObjectStorageObjectLockRequest,
     UpdateObjectStorageBucketRequest,
+    UpdateObjectStorageReplicationRequest,
 )
 
 TIER = {"uuid": "t1", "slug": "infrequent_access", "name": "Infrequent Access", "media": "hdd"}
@@ -141,8 +147,14 @@ def test_bucket_lifecycle_rules() -> None:
     path = "/object-storage/buckets/b1/lifecycle"
     client, calls = make_client(
         {
-            f"GET {path}": {"bucket_uuid": "b1", "status": "pending", "generation": 4, "applied_generation": 3,
-                            "rules": [{"id": "logs-30d", "enabled": True, "expiration": {"days": 30}}], "notes": ["n"]},
+            f"GET {path}": {
+                "bucket_uuid": "b1",
+                "status": "pending",
+                "generation": 4,
+                "applied_generation": 3,
+                "rules": [{"id": "logs-30d", "enabled": True, "expiration": {"days": 30}}],
+                "notes": ["n"],
+            },
             f"PUT {path}": {"detail": "Lifecycle rules are being applied", "generation": 5, "notes": []},
             f"DELETE {path}": {"detail": "This bucket has no lifecycle rules"},
         }
@@ -265,3 +277,209 @@ def test_bucket_encryption() -> None:
     assert buckets[0].encryption is not None
     assert (buckets[0].encryption.algorithm, buckets[0].encryption.scope) == ("AES256", "new_objects")
     assert buckets[1].encryption is None
+
+
+REPLICATION = {
+    "uuid": "r1",
+    "status": "active",
+    "pause_reason": None,
+    "direction": "outgoing",
+    "source": {"bucket_uuid": "b1", "bucket_name": "photos", "project_id": 12, "same_organization": True},
+    "destination": {
+        "type": "external",
+        "provider": "aws",
+        "endpoint": "s3.eu-west-1.amazonaws.com",
+        "region": "eu-west-1",
+        "bucket": "acme-backup",
+        "path_style": "auto",
+        "access_key_id": "****WXYZ",
+    },
+    "rules": {
+        "enabled": True,
+        "prefix": None,
+        "tags": [{"key": "backup", "value": "yes"}],
+        "delete_marker_replication": False,
+        "delete_replication": False,
+        "existing_objects": True,
+    },
+    "health": "ok",
+    "backfill": {"status": "completed", "objects": 3, "bytes": 30, "failed_objects": 0},
+    "created_at": "2026-10-02T08:59:30",
+}
+
+
+def test_replication_list_and_get() -> None:
+    client, calls = make_client(
+        {
+            "GET /object-storage/replications": [REPLICATION],
+            "GET /object-storage/replications/r1": {
+                **REPLICATION,
+                "metrics": {"replicated_bytes_24h": 100, "queued_objects": 0, "egress_bytes_month": 500},
+            },
+        }
+    )
+    os = client.object_storage
+    listed = os.list_replications(direction="outgoing", bucket_uuid="b1")
+    assert calls[0].url.params == httpx.QueryParams({"direction": "outgoing", "bucket_uuid": "b1"})
+    r = listed[0]
+    assert r.source.bucket_name == "photos" and r.destination.type == "external"
+    assert r.destination.access_key_id == "****WXYZ" and r.destination.bucket == "acme-backup"
+    assert r.rules.tags[0].key == "backup" and r.rules.existing_objects is True
+    assert r.backfill.status == "completed" and r.backfill.bytes == 30 and r.health == "ok"
+
+    os.list_replications()
+    assert str(calls[1].url) == "https://api.test/object-storage/replications"
+
+    detail = os.get_replication("r1")
+    assert detail.metrics is not None and detail.metrics.egress_bytes_month == 500
+    assert detail.destination.region == "eu-west-1"
+
+
+def test_replication_get_without_metrics() -> None:
+    incoming = {
+        **REPLICATION,
+        "direction": "incoming",
+        "source": {
+            "bucket_uuid": None,
+            "bucket_name": "photos",
+            "organization_name": "Acme",
+            "same_organization": False,
+        },
+        "destination": {"type": "cubepath", "bucket_uuid": "b9", "bucket_name": "copy", "same_organization": False},
+        "metrics": None,
+    }
+    client, _ = make_client({"GET /object-storage/replications/r1": incoming})
+    detail = client.object_storage.get_replication("r1")
+    assert detail.metrics is None and detail.source.bucket_uuid is None
+    assert detail.destination.type == "cubepath" and detail.destination.bucket_name == "copy"
+
+
+def test_create_replication_cubepath_and_external() -> None:
+    client, calls = make_client(
+        {
+            "POST /object-storage/replications": {
+                "detail": "Replication is being configured",
+                "uuid": "r1",
+                "status": "pending",
+            }
+        }
+    )
+    os = client.object_storage
+    created = os.create_replication(
+        CreateObjectStorageReplicationRequest(
+            source_bucket_uuid="b1",
+            destination=ObjectStorageReplicationDestinationRequest.cubepath("b2", grant_token="cprg_x"),
+            prefix="img/",
+        )
+    )
+    assert created.uuid == "r1" and created.status == "pending"
+    assert body(calls[0]) == {
+        "source_bucket_uuid": "b1",
+        "destination": {"type": "cubepath", "bucket_uuid": "b2", "grant_token": "cprg_x"},
+        "prefix": "img/",
+        "delete_marker_replication": False,
+        "delete_replication": False,
+        "existing_objects": True,
+    }
+
+    dest = ObjectStorageReplicationDestinationRequest.external(
+        endpoint="s3.eu-west-1.amazonaws.com",
+        region="eu-west-1",
+        bucket="acme-backup",
+        access_key_id="AKIA",
+        secret_access_key="s3cr3t",
+        provider="aws",
+    )
+    assert "s3cr3t" not in repr(dest)
+    os.create_replication(
+        CreateObjectStorageReplicationRequest(
+            source_bucket_uuid="b1",
+            destination=dest,
+            tags=[ObjectStorageReplicationTag(key="backup", value="yes")],
+            existing_objects=False,
+        )
+    )
+    sent = body(calls[1])
+    assert sent["destination"] == {
+        "type": "external",
+        "provider": "aws",
+        "endpoint": "s3.eu-west-1.amazonaws.com",
+        "region": "eu-west-1",
+        "bucket": "acme-backup",
+        "access_key_id": "AKIA",
+        "secret_access_key": "s3cr3t",
+    }
+    assert sent["tags"] == [{"key": "backup", "value": "yes"}] and sent["existing_objects"] is False
+    assert "prefix" not in sent
+
+
+def test_update_replication() -> None:
+    client, calls = make_client({})
+    os = client.object_storage
+    os.update_replication("r1", UpdateObjectStorageReplicationRequest(enabled=False))
+    assert calls[0].method == "PATCH" and calls[0].url.path == "/object-storage/replications/r1"
+    assert body(calls[0]) == {"enabled": False}
+
+    os.update_replication("r1", UpdateObjectStorageReplicationRequest(clear_prefix=True, clear_tags=True))
+    assert body(calls[1]) == {"prefix": None, "tags": None}
+
+    os.update_replication(
+        "r1", UpdateObjectStorageReplicationRequest(prefix="logs/", access_key_id="AKIA2", secret_access_key="new")
+    )
+    assert body(calls[2]) == {"prefix": "logs/", "destination": {"access_key_id": "AKIA2", "secret_access_key": "new"}}
+
+    with pytest.raises(ValueError):
+        UpdateObjectStorageReplicationRequest(prefix="a/", clear_prefix=True).to_dict()
+    with pytest.raises(ValueError):
+        UpdateObjectStorageReplicationRequest(access_key_id="AKIA").to_dict()
+
+
+def test_replication_delete_resync_revoke() -> None:
+    client, calls = make_client({})
+    os = client.object_storage
+    os.delete_replication("r1")
+    os.resync_replication("r1", older_than_days=3)
+    os.resync_replication("r1")
+    os.revoke_replication("r1")
+    assert [(c.method, c.url.path) for c in calls] == [
+        ("DELETE", "/object-storage/replications/r1"),
+        ("POST", "/object-storage/replications/r1/resync"),
+        ("POST", "/object-storage/replications/r1/resync"),
+        ("POST", "/object-storage/replications/r1/revoke"),
+    ]
+    assert body(calls[1]) == {"older_than_days": 3}
+    assert body(calls[2]) == {"older_than_days": None}
+
+
+def test_replication_grants() -> None:
+    client, calls = make_client(
+        {
+            "POST /object-storage/buckets/b2/replication-grants": {
+                "detail": "Replication grant created",
+                "uuid": "g1",
+                "token": "cprg_AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+                "token_prefix": "cprg_AbCd",
+                "bucket_uuid": "b2",
+                "note": "for Acme",
+                "expires_at": "2026-10-09T10:00:00",
+            },
+            "GET /object-storage/buckets/b2/replication-grants": [
+                {"uuid": "g1", "token_prefix": "cprg_AbCd", "status": "open", "expires_at": "2026-10-09T10:00:00"}
+            ],
+        }
+    )
+    os = client.object_storage
+    grant = os.create_replication_grant(
+        "b2", CreateObjectStorageReplicationGrantRequest(note="for Acme", expires_in_days=3)
+    )
+    assert grant.token.startswith("cprg_") and grant.token not in repr(grant)
+    assert body(calls[0]) == {"note": "for Acme", "expires_in_days": 3}
+
+    os.create_replication_grant("b2")
+    assert body(calls[1]) == {"expires_in_days": 7}
+
+    grants = os.list_replication_grants("b2")
+    assert grants[0].status == "open" and grants[0].token_prefix == "cprg_AbCd"
+
+    os.delete_replication_grant("g1")
+    assert calls[3].method == "DELETE" and calls[3].url.path == "/object-storage/replication-grants/g1"

@@ -8,15 +8,23 @@ from cubepath.models.object_storage import (
     CreateObjectStorageAccessKeyResponse,
     CreateObjectStorageBucketRequest,
     CreateObjectStorageBucketResponse,
+    CreateObjectStorageReplicationGrantRequest,
+    CreateObjectStorageReplicationGrantResponse,
+    CreateObjectStorageReplicationRequest,
+    CreateObjectStorageReplicationResponse,
     ObjectStorageAccessKey,
     ObjectStorageBucket,
     ObjectStorageBucketDetail,
     ObjectStorageLifecycle,
     ObjectStorageLifecycleChange,
+    ObjectStorageReplication,
+    ObjectStorageReplicationDetail,
+    ObjectStorageReplicationGrant,
     ObjectStorageTier,
     ObjectStorageUsage,
     SetObjectStorageObjectLockRequest,
     UpdateObjectStorageBucketRequest,
+    UpdateObjectStorageReplicationRequest,
 )
 
 if TYPE_CHECKING:
@@ -35,7 +43,7 @@ def _filters(project_id: int | None, tier: str | None, period: str | None = None
 
 
 class ObjectStorageService:
-    """S3 compatible Object Storage: tiers, buckets, access keys and usage."""
+    """S3 compatible Object Storage: tiers, buckets, access keys, replication and usage."""
 
     def __init__(self, client: CubePathClient) -> None:
         self._client = client
@@ -111,6 +119,72 @@ class ObjectStorageService:
 
     def delete_key(self, uuid: str) -> None:
         self._client.delete(f"/object-storage/keys/{uuid}")
+
+    # ── Replication ──────────────────────────────────────────────
+
+    def list_replications(
+        self, *, direction: str | None = None, bucket_uuid: str | None = None
+    ) -> list[ObjectStorageReplication]:
+        """Replications of the organization. direction is "outgoing", "incoming" or "all" (default);
+        bucket_uuid keeps the ones whose source (outgoing) or destination (incoming) is that bucket."""
+        params: dict[str, Any] = {}
+        if direction:
+            params["direction"] = direction
+        if bucket_uuid:
+            params["bucket_uuid"] = bucket_uuid
+        data: list[dict[str, Any]] = self._client.get("/object-storage/replications", params=params or None)
+        return [ObjectStorageReplication.from_dict(r) for r in data]
+
+    def get_replication(self, uuid: str) -> ObjectStorageReplicationDetail:
+        """Detail of an outgoing replication, with health, backfill and metrics."""
+        data: dict[str, Any] = self._client.get(f"/object-storage/replications/{uuid}")
+        return ObjectStorageReplicationDetail.from_dict(data)
+
+    def create_replication(self, req: CreateObjectStorageReplicationRequest) -> CreateObjectStorageReplicationResponse:
+        """Replicate a bucket (versioning enabled, no Object Lock) to a CubePath bucket or an external
+        S3 compatible bucket over HTTPS. Created asynchronously: poll until status is "active".
+        A CubePath destination lives on the same cluster, so it is not a disaster recovery copy;
+        replication to an external destination is billed as egress of the source bucket."""
+        data: dict[str, Any] = self._client.post("/object-storage/replications", json=req.to_dict())
+        return CreateObjectStorageReplicationResponse.from_dict(data)
+
+    def update_replication(self, uuid: str, req: UpdateObjectStorageReplicationRequest) -> None:
+        """Change the rules, pause or resume, or rotate the credentials of an external destination."""
+        self._client.patch(f"/object-storage/replications/{uuid}", json=req.to_dict())
+
+    def delete_replication(self, uuid: str) -> None:
+        """Remove a replication asynchronously. Data already replicated stays in the destination."""
+        self._client.delete(f"/object-storage/replications/{uuid}")
+
+    def resync_replication(self, uuid: str, *, older_than_days: int | None = None) -> None:
+        """Send the existing objects again (only objects older than older_than_days when given)."""
+        self._client.post(f"/object-storage/replications/{uuid}/resync", json={"older_than_days": older_than_days})
+
+    def revoke_replication(self, uuid: str) -> None:
+        """As the owner of the destination bucket, stop an incoming replication of another
+        organization. The source owner can only delete it afterwards."""
+        self._client.post(f"/object-storage/replications/{uuid}/revoke")
+
+    # ── Replication grants ───────────────────────────────────────
+
+    def create_replication_grant(
+        self, bucket_uuid: str, req: CreateObjectStorageReplicationGrantRequest | None = None
+    ) -> CreateObjectStorageReplicationGrantResponse:
+        """Let another organization replicate into this bucket. The token is one use, expires and is
+        only returned here: hand it to the other organization for its create_replication call."""
+        req = req or CreateObjectStorageReplicationGrantRequest()
+        data: dict[str, Any] = self._client.post(
+            f"/object-storage/buckets/{bucket_uuid}/replication-grants", json=req.to_dict()
+        )
+        return CreateObjectStorageReplicationGrantResponse.from_dict(data)
+
+    def list_replication_grants(self, bucket_uuid: str) -> list[ObjectStorageReplicationGrant]:
+        data: list[dict[str, Any]] = self._client.get(f"/object-storage/buckets/{bucket_uuid}/replication-grants")
+        return [ObjectStorageReplicationGrant.from_dict(g) for g in data]
+
+    def delete_replication_grant(self, uuid: str) -> None:
+        """Revoke a grant that was not used yet."""
+        self._client.delete(f"/object-storage/replication-grants/{uuid}")
 
     # ── Usage ────────────────────────────────────────────────────
 

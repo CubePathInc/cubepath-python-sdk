@@ -25,6 +25,21 @@ __all__ = [
     "ObjectStorageTierUsage",
     "ObjectStorageBucketUsageRow",
     "ObjectStorageUsage",
+    "ObjectStorageReplicationTag",
+    "ObjectStorageReplicationSource",
+    "ObjectStorageReplicationDestination",
+    "ObjectStorageReplicationRules",
+    "ObjectStorageReplicationBackfill",
+    "ObjectStorageReplicationMetrics",
+    "ObjectStorageReplication",
+    "ObjectStorageReplicationDetail",
+    "ObjectStorageReplicationDestinationRequest",
+    "CreateObjectStorageReplicationRequest",
+    "CreateObjectStorageReplicationResponse",
+    "UpdateObjectStorageReplicationRequest",
+    "ObjectStorageReplicationGrant",
+    "CreateObjectStorageReplicationGrantRequest",
+    "CreateObjectStorageReplicationGrantResponse",
 ]
 
 
@@ -515,4 +530,363 @@ class ObjectStorageLifecycleChange:
     def from_dict(cls, data: dict[str, Any]) -> ObjectStorageLifecycleChange:
         result: ObjectStorageLifecycleChange = _simple(cls, data)
         result.notes = list(data.get("notes") or [])
+        return result
+
+
+# ── Replication ───────────────────────────────────────────────────
+
+
+@dataclass
+class ObjectStorageReplicationTag:
+    key: str = ""
+    value: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageReplicationTag:
+        result: ObjectStorageReplicationTag = _simple(cls, data)
+        return result
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"key": self.key, "value": self.value}
+
+
+@dataclass
+class ObjectStorageReplicationSource:
+    """Source bucket. For an incoming replication of another organization bucket_uuid and
+    project_id are None (only the names are shown)."""
+
+    bucket_uuid: str | None = None
+    bucket_name: str | None = None
+    project_id: int | None = None
+    organization_name: str | None = None
+    same_organization: bool = False
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageReplicationSource:
+        result: ObjectStorageReplicationSource = _simple(cls, data)
+        return result
+
+
+@dataclass
+class ObjectStorageReplicationDestination:
+    """Destination of a replication. ``type`` "cubepath" fills the bucket_* fields, "external"
+    the provider, endpoint, region, bucket, path_style and the masked access_key_id (the secret is
+    never returned)."""
+
+    type: str = ""
+    bucket_uuid: str | None = None
+    bucket_name: str | None = None
+    project_id: int | None = None
+    """Only when the destination bucket is in your organization."""
+    organization_name: str | None = None
+    same_organization: bool = False
+    provider: str | None = None
+    endpoint: str | None = None
+    region: str | None = None
+    bucket: str | None = None
+    path_style: str | None = None
+    access_key_id: str | None = None
+    """Masked: **** and the last 4 characters."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageReplicationDestination:
+        result: ObjectStorageReplicationDestination = _simple(cls, data)
+        return result
+
+
+@dataclass
+class ObjectStorageReplicationRules:
+    enabled: bool = False
+    prefix: str | None = None
+    tags: list[ObjectStorageReplicationTag] = field(default_factory=list)
+    delete_marker_replication: bool = False
+    delete_replication: bool = False
+    existing_objects: bool = False
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageReplicationRules:
+        result: ObjectStorageReplicationRules = _simple(cls, data)
+        result.tags = [ObjectStorageReplicationTag.from_dict(t) for t in (data or {}).get("tags") or []]
+        return result
+
+
+@dataclass
+class ObjectStorageReplicationBackfill:
+    """Copy of the objects the bucket already held. status: none, queued, running, completed or
+    failed. objects, bytes and failed_objects add up over every attempt and resync."""
+
+    status: str = "none"
+    started_at: str | None = None
+    finished_at: str | None = None
+    objects: int = 0
+    bytes: int = 0
+    failed_objects: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageReplicationBackfill:
+        result: ObjectStorageReplicationBackfill = _simple(cls, data)
+        return result
+
+
+@dataclass
+class ObjectStorageReplicationMetrics:
+    replicated_bytes_24h: int | None = None
+    replicated_objects_24h: int | None = None
+    failed_objects_1h: int | None = None
+    queued_objects: int | None = None
+    queued_bytes: int | None = None
+    last_sample_at: str | None = None
+    egress_bytes_month: int | None = None
+    """External destinations only."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> ObjectStorageReplicationMetrics:
+        result: ObjectStorageReplicationMetrics = _simple(cls, data)
+        return result
+
+
+@dataclass
+class ObjectStorageReplication:
+    """A bucket replication. status: pending, active, paused (see pause_reason), suspended, error
+    or deleting. pause_reason: customer, org, abuse, admin, source_blocked or dest_revoked.
+    direction: outgoing (the source bucket is yours) or incoming. health: unknown, ok, lagging or
+    failing."""
+
+    uuid: str = ""
+    status: str = ""
+    pause_reason: str | None = None
+    direction: str = ""
+    source: ObjectStorageReplicationSource = field(default_factory=ObjectStorageReplicationSource)
+    destination: ObjectStorageReplicationDestination = field(default_factory=ObjectStorageReplicationDestination)
+    rules: ObjectStorageReplicationRules = field(default_factory=ObjectStorageReplicationRules)
+    health: str = "unknown"
+    health_reason: str | None = None
+    health_checked_at: str | None = None
+    backfill: ObjectStorageReplicationBackfill = field(default_factory=ObjectStorageReplicationBackfill)
+    error_message: str | None = None
+    created_at: str | None = None
+    active_at: str | None = None
+
+    def _nested(self, data: dict[str, Any]) -> None:
+        self.source = ObjectStorageReplicationSource.from_dict(data.get("source"))
+        self.destination = ObjectStorageReplicationDestination.from_dict(data.get("destination"))
+        self.rules = ObjectStorageReplicationRules.from_dict(data.get("rules"))
+        self.backfill = ObjectStorageReplicationBackfill.from_dict(data.get("backfill"))
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ObjectStorageReplication:
+        result: ObjectStorageReplication = _simple(cls, data)
+        result._nested(data)
+        return result
+
+
+@dataclass
+class ObjectStorageReplicationDetail(ObjectStorageReplication):
+    metrics: ObjectStorageReplicationMetrics | None = None
+    """None when metrics are unavailable or there is no sample yet."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ObjectStorageReplicationDetail:
+        result: ObjectStorageReplicationDetail = _simple(cls, data)
+        result._nested(data)
+        result.metrics = ObjectStorageReplicationMetrics.from_dict(data["metrics"]) if data.get("metrics") else None
+        return result
+
+
+@dataclass
+class ObjectStorageReplicationDestinationRequest:
+    """Where to replicate. ``type`` "cubepath": bucket_uuid (plus grant_token when the bucket
+    belongs to another organization). ``type`` "external": endpoint (public HTTPS host, port 443
+    only), region, bucket, access_key_id and secret_access_key; provider ("aws", "wasabi" or
+    "other") and path_style ("auto", "on" or "off") are optional. Use the helpers
+    :meth:`cubepath` and :meth:`external`."""
+
+    type: str
+    bucket_uuid: str | None = None
+    grant_token: str | None = None
+    provider: str | None = None
+    endpoint: str | None = None
+    region: str | None = None
+    bucket: str | None = None
+    path_style: str | None = None
+    access_key_id: str | None = None
+    secret_access_key: str | None = field(default=None, repr=False)
+    """Never returned by the API."""
+
+    @classmethod
+    def cubepath(cls, bucket_uuid: str, grant_token: str | None = None) -> ObjectStorageReplicationDestinationRequest:
+        return cls(type="cubepath", bucket_uuid=bucket_uuid, grant_token=grant_token)
+
+    @classmethod
+    def external(
+        cls,
+        *,
+        endpoint: str,
+        region: str,
+        bucket: str,
+        access_key_id: str,
+        secret_access_key: str,
+        provider: str | None = None,
+        path_style: str | None = None,
+    ) -> ObjectStorageReplicationDestinationRequest:
+        return cls(
+            type="external",
+            endpoint=endpoint,
+            region=region,
+            bucket=bucket,
+            access_key_id=access_key_id,
+            secret_access_key=secret_access_key,
+            provider=provider,
+            path_style=path_style,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"type": self.type}
+        for k in (
+            "bucket_uuid",
+            "grant_token",
+            "provider",
+            "endpoint",
+            "region",
+            "bucket",
+            "path_style",
+            "access_key_id",
+            "secret_access_key",
+        ):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        return d
+
+
+@dataclass
+class CreateObjectStorageReplicationRequest:
+    """Replicate a versioned bucket to one destination. Filter by prefix or by tags, not both;
+    delete markers cannot be replicated with a tag filter."""
+
+    source_bucket_uuid: str
+    destination: ObjectStorageReplicationDestinationRequest
+    prefix: str | None = None
+    tags: list[ObjectStorageReplicationTag] | None = None
+    delete_marker_replication: bool = False
+    delete_replication: bool = False
+    existing_objects: bool = True
+    """Copy the objects the bucket already holds."""
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {
+            "source_bucket_uuid": self.source_bucket_uuid,
+            "destination": self.destination.to_dict(),
+            "delete_marker_replication": self.delete_marker_replication,
+            "delete_replication": self.delete_replication,
+            "existing_objects": self.existing_objects,
+        }
+        if self.prefix is not None:
+            d["prefix"] = self.prefix
+        if self.tags is not None:
+            d["tags"] = [t.to_dict() for t in self.tags]
+        return d
+
+
+@dataclass
+class CreateObjectStorageReplicationResponse:
+    detail: str = ""
+    uuid: str = ""
+    status: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CreateObjectStorageReplicationResponse:
+        result: CreateObjectStorageReplicationResponse = _simple(cls, data)
+        return result
+
+
+@dataclass
+class UpdateObjectStorageReplicationRequest:
+    """Only the fields that are set are sent. ``enabled=False`` pauses, ``True`` resumes. To remove
+    the prefix or the tag filter set ``clear_prefix`` or ``clear_tags`` (sends null). New
+    credentials (access_key_id and secret_access_key, both) apply to external destinations only."""
+
+    enabled: bool | None = None
+    prefix: str | None = None
+    clear_prefix: bool = False
+    tags: list[ObjectStorageReplicationTag] | None = None
+    clear_tags: bool = False
+    delete_marker_replication: bool | None = None
+    delete_replication: bool | None = None
+    existing_objects: bool | None = None
+    access_key_id: str | None = None
+    secret_access_key: str | None = field(default=None, repr=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        if self.prefix is not None and self.clear_prefix:
+            raise ValueError("Set prefix or clear_prefix, not both")
+        if self.tags is not None and self.clear_tags:
+            raise ValueError("Set tags or clear_tags, not both")
+        if (self.access_key_id is None) != (self.secret_access_key is None):
+            raise ValueError("access_key_id and secret_access_key must be set together")
+        d: dict[str, Any] = {}
+        for k in ("enabled", "delete_marker_replication", "delete_replication", "existing_objects"):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        if self.clear_prefix:
+            d["prefix"] = None
+        elif self.prefix is not None:
+            d["prefix"] = self.prefix
+        if self.clear_tags:
+            d["tags"] = None
+        elif self.tags is not None:
+            d["tags"] = [t.to_dict() for t in self.tags]
+        if self.access_key_id is not None:
+            d["destination"] = {"access_key_id": self.access_key_id, "secret_access_key": self.secret_access_key}
+        return d
+
+
+@dataclass
+class ObjectStorageReplicationGrant:
+    """Authorization for another organization to replicate into a bucket. status: open, used,
+    expired or revoked. The token is never returned again after creation."""
+
+    uuid: str = ""
+    token_prefix: str = ""
+    note: str | None = None
+    status: str = ""
+    expires_at: str | None = None
+    used_at: str | None = None
+    revoked_at: str | None = None
+    created_at: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ObjectStorageReplicationGrant:
+        result: ObjectStorageReplicationGrant = _simple(cls, data)
+        return result
+
+
+@dataclass
+class CreateObjectStorageReplicationGrantRequest:
+    note: str | None = None
+    expires_in_days: int = 7
+    """1 to 30."""
+
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"expires_in_days": self.expires_in_days}
+        if self.note is not None:
+            d["note"] = self.note
+        return d
+
+
+@dataclass
+class CreateObjectStorageReplicationGrantResponse:
+    detail: str = ""
+    uuid: str = ""
+    token: str = field(default="", repr=False)
+    """Returned only once: share it with the other organization now."""
+    token_prefix: str = ""
+    bucket_uuid: str = ""
+    note: str | None = None
+    expires_at: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CreateObjectStorageReplicationGrantResponse:
+        result: CreateObjectStorageReplicationGrantResponse = _simple(cls, data)
         return result
