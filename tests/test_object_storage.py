@@ -265,27 +265,3 @@ def test_bucket_encryption() -> None:
     assert buckets[0].encryption is not None
     assert (buckets[0].encryption.algorithm, buckets[0].encryption.scope) == ("AES256", "new_objects")
     assert buckets[1].encryption is None
-
-
-def test_encryption_optional_and_enable() -> None:
-    client, calls = make_client(
-        {
-            "POST /object-storage/buckets": {"uuid": "b1", "status": "pending", "tier": TIER},
-            "PUT /object-storage/buckets/b1/encryption": {
-                "detail": "Encryption at rest is being enabled",
-                "reencrypt_job_id": 7,
-            },
-        }
-    )
-    os = client.object_storage
-    os.create_bucket(CreateObjectStorageBucketRequest(name="photos", tier="infrequent_access"))
-    os.create_bucket(CreateObjectStorageBucketRequest(name="scratch", tier="infrequent_access", encryption=False))
-    change = os.enable_bucket_encryption("b1")
-    assert "encryption" not in body(calls[0])
-    assert body(calls[1])["encryption"] is False
-    assert (calls[2].method, calls[2].url.path, body(calls[2])) == (
-        "PUT",
-        "/object-storage/buckets/b1/encryption",
-        {"enabled": True},
-    )
-    assert change.reencrypt_job_id == 7 and change.detail

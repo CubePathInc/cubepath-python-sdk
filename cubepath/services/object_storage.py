@@ -11,7 +11,6 @@ from cubepath.models.object_storage import (
     ObjectStorageAccessKey,
     ObjectStorageBucket,
     ObjectStorageBucketDetail,
-    ObjectStorageEncryptionChange,
     ObjectStorageLifecycle,
     ObjectStorageLifecycleChange,
     ObjectStorageTier,
@@ -64,14 +63,6 @@ class ObjectStorageService:
 
     def update_bucket(self, uuid: str, req: UpdateObjectStorageBucketRequest) -> None:
         self._client.patch(f"/object-storage/buckets/{uuid}", json=req.to_dict())
-
-    def enable_bucket_encryption(self, uuid: str) -> ObjectStorageEncryptionChange:
-        """Turn on encryption at rest (AES-256) for a bucket created without it. The objects already
-        stored are encrypted in the background (reencrypt_job_id); in a versioned bucket only the
-        current versions are. It cannot be turned off afterwards; on an encrypted bucket nothing
-        changes."""
-        data: dict[str, Any] = self._client.put(f"/object-storage/buckets/{uuid}/encryption", json={"enabled": True})
-        return ObjectStorageEncryptionChange.from_dict(data)
 
     def set_bucket_object_lock(self, uuid: str, req: SetObjectStorageObjectLockRequest) -> None:
         """Change or remove (default_retention None) the default retention of a bucket created with

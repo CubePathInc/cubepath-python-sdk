@@ -185,11 +185,6 @@ bucket = client.object_storage.create_bucket(CreateObjectStorageBucketRequest(
 detail = client.object_storage.get_bucket(bucket.uuid)  # connection info, month usage, CDN origin
 client.object_storage.update_bucket(bucket.uuid, UpdateObjectStorageBucketRequest(versioning="enabled"))
 
-# Encryption at rest (AES-256) is on by default; CreateObjectStorageBucketRequest(..., encryption=False)
-# skips it. It can be enabled later (the objects already stored are encrypted in the background; in a
-# versioned bucket only the current versions) and never turned off.
-change = client.object_storage.enable_bucket_encryption(bucket.uuid)
-
 # The secret is only returned here
 key = client.object_storage.create_key(CreateObjectStorageAccessKeyRequest(
     name="backups",
