@@ -205,6 +205,34 @@ client.object_storage.delete_key(key.uuid)
 client.object_storage.delete_bucket(bucket.uuid, force=True)  # force purges the content first
 ```
 
+#### Presigned URLs
+
+This SDK talks to the CubePath API, not to S3. To share one object for a while, sign a
+presigned GET URL with the official S3 SDK and one of your access keys: endpoint
+`https://eu.cubestorage.io`, region `eu`, path style, SigV4. A URL lasts at most 24 hours
+(86400 seconds), the file is always downloaded as an attachment (do not set
+`ResponseContentDisposition` or any other `response-*` override: they are refused) and every
+download counts as egress of the bucket. Deleting the access key that signed a URL cuts it
+before it expires. From a terminal, `cubecli s3 presign <bucket>/<key> --expires 6h` does the
+same.
+
+```python
+import boto3
+from botocore.config import Config
+
+s3 = boto3.client(
+    "s3",
+    endpoint_url="https://eu.cubestorage.io",
+    region_name="eu",
+    aws_access_key_id=key.access_key_id,
+    aws_secret_access_key=key.secret_access_key,
+    config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+)
+url = s3.generate_presigned_url(
+    "get_object", Params={"Bucket": "my-backups", "Key": "reports/2026-09.pdf"}, ExpiresIn=86400
+)
+```
+
 ### Managed Databases
 
 Databases are created asynchronously: poll `get()` until `status` is `active`. The plan
