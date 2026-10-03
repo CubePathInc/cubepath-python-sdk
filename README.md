@@ -312,6 +312,59 @@ client.object_storage.delete_replication_grant(grant.uuid)  # revoke while unuse
 client.object_storage.revoke_replication(incoming_replication_uuid)  # stop an incoming replication
 ```
 
+#### Event Notifications
+
+Send bucket events (`object.created`, `object.removed`, `object.tagging`) to a signed webhook
+or to a Cloud Alerts channel. A destination belongs to the organization; a rule on a bucket picks
+the events, an optional key prefix and suffix, and the destination. The signing secret is only
+returned by `create_event_destination` and `rotate_event_destination_secret`: store it then.
+After a rotation the previous secret keeps signing for 24 hours.
+
+```python
+from cubepath.models import CreateObjectStorageEventDestinationRequest, CreateObjectStorageEventRuleRequest
+
+created = client.object_storage.create_event_destination(
+    CreateObjectStorageEventDestinationRequest(
+        name="uploads-hook", type="webhook", url="https://example.com/hooks/storage"
+    )  # or type="notificator", notificator_id=channel_id
+)
+secret = created.signing_secret  # whsec_..., shown only now
+
+rule = client.object_storage.create_event_rule(
+    bucket.uuid,
+    CreateObjectStorageEventRuleRequest(
+        name="new-uploads", destination_uuid=created.destination.uuid, events=["object.created"], prefix="incoming/"
+    ),
+)  # rule.status is "pending" until applied, then "active"
+
+client.object_storage.test_event_destination(created.destination.uuid)  # sends a cubepath.ping
+page = client.object_storage.list_event_deliveries(created.destination.uuid, status="failed", limit=20)
+# Older page: before=page.next_before (unix milliseconds) while it is not None.
+```
+
+Verify every webhook delivery before trusting it, against the raw body. `CubePath-Signature`
+holds one or more `v1=<hex>` values (`v1=<new>, v1=<previous>` for 24 hours after a rotation), each the HMAC-SHA256 of `CubePath-Timestamp + "." + body`;
+`verify_storage_event_signature` compares them in constant time and rejects timestamps more than
+5 minutes away:
+
+```python
+from cubepath import StorageEventSignatureError, verify_storage_event_signature
+
+@app.post("/hooks/storage")
+def storage_hook():
+    try:
+        verify_storage_event_signature(
+            secret,
+            request.headers.get("CubePath-Timestamp", ""),
+            request.get_data(),
+            request.headers.get("CubePath-Signature", ""),
+        )
+    except StorageEventSignatureError:
+        return "", 401
+    # Deliveries are at least once: deduplicate by the CubePath-Event-Id header.
+    return "", 204
+```
+
 #### Presigned URLs
 
 This SDK talks to the CubePath API, not to S3. To share one object for a while, sign a
