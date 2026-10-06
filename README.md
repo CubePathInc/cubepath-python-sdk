@@ -312,6 +312,20 @@ client.object_storage.delete_replication_grant(grant.uuid)  # revoke while unuse
 client.object_storage.revoke_replication(incoming_replication_uuid)  # stop an incoming replication
 ```
 
+#### Encryption at rest
+
+Every bucket stores its objects encrypted with AES-256 (SSE-S3), at no charge; there is nothing
+to configure and it cannot be turned off. `encryption` on a bucket is `None` until the bucket
+default is applied, then `algorithm` is `AES256` and `scope` is `all_objects`, or `new_objects`
+while objects uploaded before the default may still be stored unencrypted (they are re-encrypted
+in the background). SSE-KMS is not available; SSE-C (your own key in each request) works through
+any S3 client.
+
+```python
+for b in client.object_storage.list_buckets():
+    print(b.name, b.encryption.scope if b.encryption else "not applied yet")
+```
+
 #### Event Notifications
 
 Send bucket events (`object.created`, `object.removed`, `object.tagging`) to a signed webhook
@@ -340,6 +354,16 @@ rule = client.object_storage.create_event_rule(
 client.object_storage.test_event_destination(created.destination.uuid)  # sends a cubepath.ping
 page = client.object_storage.list_event_deliveries(created.destination.uuid, status="failed", limit=20)
 # Older page: before=page.next_before (unix milliseconds) while it is not None.
+
+# Manage them: pause a rule, rotate the secret, delete (a destination only once it has no rules)
+from cubepath.models import UpdateObjectStorageEventRuleRequest
+
+rules = client.object_storage.list_event_rules(bucket.uuid)
+client.object_storage.update_event_rule(bucket.uuid, rule.uuid, UpdateObjectStorageEventRuleRequest(enabled=False))
+new_secret = client.object_storage.rotate_event_destination_secret(created.destination.uuid).signing_secret
+client.object_storage.delete_event_rule(bucket.uuid, rule.uuid)
+destinations = client.object_storage.list_event_destinations()
+client.object_storage.delete_event_destination(created.destination.uuid)
 ```
 
 Verify every webhook delivery before trusting it, against the raw body. `CubePath-Signature`
