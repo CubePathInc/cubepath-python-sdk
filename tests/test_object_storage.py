@@ -271,12 +271,21 @@ def test_bucket_encryption() -> None:
                 {"uuid": "b1", "tier": TIER, "encryption": {"algorithm": "AES256", "scope": "new_objects"}},
                 {"uuid": "b2", "tier": TIER, "encryption": None},
             ],
+            "GET /object-storage/buckets/b1": {
+                "uuid": "b1",
+                "tier": TIER,
+                "encryption": {"algorithm": "AES256", "scope": "all_objects"},
+            },
         }
     )
     buckets = client.object_storage.list_buckets()
     assert buckets[0].encryption is not None
     assert (buckets[0].encryption.algorithm, buckets[0].encryption.scope) == ("AES256", "new_objects")
     assert buckets[1].encryption is None
+    # the detail parses it too (it was left as a raw dict)
+    detail = client.object_storage.get_bucket("b1")
+    assert detail.encryption is not None
+    assert (detail.encryption.algorithm, detail.encryption.scope) == ("AES256", "all_objects")
 
 
 REPLICATION = {

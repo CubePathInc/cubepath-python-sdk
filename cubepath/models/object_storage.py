@@ -254,6 +254,7 @@ class ObjectStorageBucketDetail(ObjectStorageBucket):
         result: ObjectStorageBucketDetail = _simple(cls, data)
         result.tier = ObjectStorageTierSummary.from_dict(data.get("tier"))
         result.object_lock = ObjectStorageObjectLock.from_dict(data.get("object_lock"))
+        result.encryption = ObjectStorageBucketEncryption.from_dict(data.get("encryption"))
         result.connection = ObjectStorageBucketConnection.from_dict(data.get("connection"))
         result.usage = ObjectStorageBucketUsage.from_dict(data["usage"]) if data.get("usage") else None
         result.cdn = ObjectStorageBucketCDN.from_dict(data["cdn"]) if data.get("cdn") else None
