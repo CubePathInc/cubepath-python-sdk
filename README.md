@@ -172,6 +172,7 @@ from cubepath.models import (
     CreateCDNOriginRequest,
     CreateObjectStorageAccessKeyRequest,
     CreateObjectStorageBucketRequest,
+    UpdateObjectStorageAccessKeyRequest,
     UpdateObjectStorageBucketRequest,
 )
 
@@ -193,6 +194,13 @@ key = client.object_storage.create_key(CreateObjectStorageAccessKeyRequest(
     bucket_uuids=[bucket.uuid],  # omit for every bucket of the project
 ))
 print(key.access_key_id, key.secret_access_key, key.endpoint, key.region)
+
+# Edit it later: the access key id and the secret stay, only the fields you set change
+client.object_storage.update_key(key.uuid, UpdateObjectStorageAccessKeyRequest(
+    permission="read_only",
+    bypass_governance=False,  # needed when a bypass key becomes read_only
+    all_buckets=True,  # or bucket_uuids=[...]; omit both to keep the buckets
+))
 
 usage = client.object_storage.get_usage(period="2026-09")
 

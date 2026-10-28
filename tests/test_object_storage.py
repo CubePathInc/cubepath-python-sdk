@@ -17,6 +17,7 @@ from cubepath.models import (
     ObjectStorageReplicationDestinationRequest,
     ObjectStorageReplicationTag,
     SetObjectStorageObjectLockRequest,
+    UpdateObjectStorageAccessKeyRequest,
     UpdateObjectStorageBucketRequest,
     UpdateObjectStorageReplicationRequest,
 )
@@ -262,6 +263,30 @@ def test_access_key_bypass_governance() -> None:
         "permission": "read_write",
         "bypass_governance": True,
     }
+
+
+def test_update_access_key() -> None:
+    client, calls = make_client({"PATCH /object-storage/keys/k1": {"detail": "Access key updated."}})
+    os = client.object_storage
+    os.update_key("k1", UpdateObjectStorageAccessKeyRequest(name="backups-2"))
+    os.update_key("k1", UpdateObjectStorageAccessKeyRequest(permission="read_only", bypass_governance=False))
+    os.update_key("k1", UpdateObjectStorageAccessKeyRequest(bucket_uuids=["b1", "b2"]))
+    os.update_key("k1", UpdateObjectStorageAccessKeyRequest(all_buckets=True))
+    os.update_key("k1", UpdateObjectStorageAccessKeyRequest(name="veeam", bypass_governance=True))
+    assert all(c.method == "PATCH" and c.url.path == "/object-storage/keys/k1" for c in calls)
+    assert body(calls[0]) == {"name": "backups-2"}
+    assert body(calls[1]) == {"permission": "read_only", "bypass_governance": False}
+    assert body(calls[2]) == {"bucket_uuids": ["b1", "b2"]}
+    assert body(calls[3]) == {"bucket_uuids": None}
+    assert body(calls[4]) == {"name": "veeam", "bypass_governance": True}
+
+    with pytest.raises(ValueError):
+        UpdateObjectStorageAccessKeyRequest(bucket_uuids=["b1"], all_buckets=True).to_dict()
+    with pytest.raises(ValueError):
+        UpdateObjectStorageAccessKeyRequest(bucket_uuids=[]).to_dict()
+    with pytest.raises(ValueError):
+        os.update_key("k1", UpdateObjectStorageAccessKeyRequest(bucket_uuids=[]))
+    assert len(calls) == 5
 
 
 def test_bucket_encryption() -> None:

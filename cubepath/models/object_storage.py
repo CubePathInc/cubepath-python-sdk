@@ -21,6 +21,7 @@ __all__ = [
     "ObjectStorageAccessKey",
     "CreateObjectStorageAccessKeyRequest",
     "CreateObjectStorageAccessKeyResponse",
+    "UpdateObjectStorageAccessKeyRequest",
     "ObjectStorageFreeTierItem",
     "ObjectStorageTierUsage",
     "ObjectStorageBucketUsageRow",
@@ -392,7 +393,7 @@ class CreateObjectStorageAccessKeyRequest:
     """ISO 8601 date time in the future."""
     bypass_governance: bool = False
     """read_write keys only: the key may delete versions under governance retention (sending
-    x-amz-bypass-governance-retention: true). Cannot be changed later."""
+    x-amz-bypass-governance-retention: true). Can be edited later with update_key."""
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"name": self.name, "tier": self.tier, "permission": self.permission}
@@ -404,6 +405,39 @@ class CreateObjectStorageAccessKeyRequest:
             d["expires_at"] = self.expires_at
         if self.bypass_governance:
             d["bypass_governance"] = True
+        return d
+
+
+@dataclass
+class UpdateObjectStorageAccessKeyRequest:
+    """Only the fields that are set are sent. The access key id, the secret, the expiration, the tier
+    and the project never change. ``bucket_uuids`` limits the key to those buckets (1 to 20);
+    ``all_buckets`` gives it every bucket of the project in the tier, future ones included (sends
+    null). Set one of them, or neither to leave the buckets as they are. A bypass key that becomes
+    read_only needs ``bypass_governance=False`` too."""
+
+    name: str | None = None
+    permission: str | None = None
+    """"read_write" or "read_only"."""
+    bucket_uuids: list[str] | None = None
+    all_buckets: bool = False
+    bypass_governance: bool | None = None
+    """read_write keys only."""
+
+    def to_dict(self) -> dict[str, Any]:
+        if self.bucket_uuids is not None and self.all_buckets:
+            raise ValueError("Set bucket_uuids or all_buckets, not both")
+        if self.bucket_uuids is not None and not self.bucket_uuids:
+            raise ValueError("bucket_uuids cannot be empty: use all_buckets for every bucket")
+        d: dict[str, Any] = {}
+        for k in ("name", "permission", "bypass_governance"):
+            v = getattr(self, k)
+            if v is not None:
+                d[k] = v
+        if self.all_buckets:
+            d["bucket_uuids"] = None
+        elif self.bucket_uuids is not None:
+            d["bucket_uuids"] = self.bucket_uuids
         return d
 
 

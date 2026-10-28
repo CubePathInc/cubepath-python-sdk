@@ -29,6 +29,7 @@ from cubepath.models.object_storage import (
     ObjectStorageTier,
     ObjectStorageUsage,
     SetObjectStorageObjectLockRequest,
+    UpdateObjectStorageAccessKeyRequest,
     UpdateObjectStorageBucketRequest,
     UpdateObjectStorageEventDestinationRequest,
     UpdateObjectStorageEventRuleRequest,
@@ -201,6 +202,11 @@ class ObjectStorageService:
         """Create an access key. The secret is only returned here; the key works once its status is "active"."""
         data: dict[str, Any] = self._client.post("/object-storage/keys", json=req.to_dict())
         return CreateObjectStorageAccessKeyResponse.from_dict(data)
+
+    def update_key(self, uuid: str, req: UpdateObjectStorageAccessKeyRequest) -> None:
+        """Edit the name, permission, buckets or governance bypass of a key; the access key id and the
+        secret stay. Changes to permission or buckets need an active key and apply within seconds."""
+        self._client.patch(f"/object-storage/keys/{uuid}", json=req.to_dict())
 
     def delete_key(self, uuid: str) -> None:
         self._client.delete(f"/object-storage/keys/{uuid}")
