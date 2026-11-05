@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 from typing import Any
 
@@ -142,6 +144,21 @@ def test_signature_valid(secret: str, body: Any, header: str) -> None:
 def test_signature_rejected(ts: str, body: str, header: str, now: float) -> None:
     with pytest.raises(StorageEventSignatureError):
         verify_storage_event_signature(SECRET, ts, body, header, now=now)
+
+
+def _signed(secret: str, ts: str) -> str:
+    return "v1=" + hmac.new(secret.encode(), f"{ts}.{BODY}".encode(), hashlib.sha256).hexdigest()
+
+
+def test_signature_empty_secret_rejected() -> None:
+    with pytest.raises(StorageEventSignatureError):
+        verify_storage_event_signature("", TS, BODY, _signed("", TS), now=NOW)
+
+
+@pytest.mark.parametrize("ts", ["²", "١٢٣", "9" * 20, "-1", "+1790000000"])
+def test_signature_malformed_timestamp_rejected(ts: str) -> None:
+    with pytest.raises(StorageEventSignatureError):
+        verify_storage_event_signature(SECRET, ts, BODY, _signed(SECRET, ts), 0, now=NOW)
 
 
 def test_signature_tolerance() -> None:

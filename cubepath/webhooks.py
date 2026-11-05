@@ -10,6 +10,7 @@ import time
 __all__ = ["StorageEventSignatureError", "verify_storage_event_signature"]
 
 _HEX64 = re.compile(r"^[0-9a-fA-F]{64}$")
+_UNIX_SECONDS = re.compile(r"[0-9]{1,12}")
 
 
 class StorageEventSignatureError(Exception):
@@ -33,10 +34,13 @@ def verify_storage_event_signature(
     during a secret rotation), each the HMAC-SHA256 of ``timestamp + "." + body``. Deliveries whose timestamp is
     further than ``tolerance`` seconds (default 300) from now are rejected; 0 skips that check.
 
-    Raises StorageEventSignatureError when the delivery is not valid.
+    Raises StorageEventSignatureError when the delivery is not valid, and when ``secret`` is empty,
+    so a secret that was never configured verifies nothing.
     """
+    if not secret:
+        raise StorageEventSignatureError("The signing secret is empty")
     ts = (timestamp or "").strip()
-    if not ts.isdigit():
+    if not _UNIX_SECONDS.fullmatch(ts):
         raise StorageEventSignatureError("Invalid timestamp")
     current = time.time() if now is None else now
     if tolerance > 0 and abs(current - int(ts)) > tolerance:
