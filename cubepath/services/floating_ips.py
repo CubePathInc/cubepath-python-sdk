@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from cubepath.baremetal_ref import baremetal_ref
 from cubepath.models.floating_ips import FloatingIP, FloatingIPsResponse
 
 if TYPE_CHECKING:
@@ -26,7 +27,10 @@ class FloatingIPService:
     def release(self, address: str) -> None:
         self._client.post(f"/floating_ips/release/{address}")
 
-    def assign(self, resource_type: str, resource_id: str, address: str) -> None:
+    def assign(self, resource_type: str, resource_id: str | int, address: str) -> None:
+        """Assign an owned IP to a server. For ``baremetal``, ``resource_id`` is the number or the uuid."""
+        if resource_type == "baremetal":
+            resource_id = baremetal_ref(resource_id)
         self._client.post(
             f"/floating_ips/assign/{resource_type}/{resource_id}",
             params={"address": address},

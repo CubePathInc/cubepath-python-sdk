@@ -69,7 +69,10 @@ class SSHKeyRef:
 
 @dataclass
 class Baremetal:
-    id: str = ""
+    # ``id`` is the server number as the API sends it (an int today); ``uuid`` is empty on an API that does not
+    # send it yet. Either one is a valid reference for the ``client.baremetal`` methods.
+    id: str | int = ""
+    uuid: str = ""
     hostname: str = ""
     label: str = ""
     project_id: str = ""
@@ -88,6 +91,7 @@ class Baremetal:
     def from_dict(cls, data: dict[str, Any]) -> Baremetal:
         return cls(
             id=data.get("id", ""),
+            uuid=data.get("uuid") or "",
             hostname=data.get("hostname", ""),
             label=data.get("label", ""),
             project_id=data.get("project_id", ""),
