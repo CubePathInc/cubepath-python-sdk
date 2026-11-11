@@ -156,3 +156,81 @@ def test_reinstall_status_cancel_and_monitoring() -> None:
     assert status.is_reinstalling and status.status == "deploying"
     assert calls[1].method == "DELETE" and calls[1].url.path == "/baremetal/9/reinstall"
     assert calls[2].method == "PUT" and calls[2].url.params["enable"] == "true" and not calls[2].content
+
+
+UUID = "3f2a8c10-1b2c-4d3e-8f90-a1b2c3d4e5f6"
+
+
+def test_baremetal_ref_validation() -> None:
+    from cubepath.baremetal_ref import baremetal_ref
+
+    assert baremetal_ref(5) == "5"
+    assert baremetal_ref("0007") == "0007"
+    assert baremetal_ref(UUID.upper()) == UUID
+    for bad in ("", "abc", "5a", "5/power", "../x", UUID + "x", UUID.replace("-", ""), "٣", True, -1, None, 1.5):
+        with pytest.raises(ValueError):
+            baremetal_ref(bad)
+
+
+def test_baremetal_calls_reject_a_bad_reference_before_any_request() -> None:
+    client, calls = make_client({})
+    with pytest.raises(ValueError):
+        client.baremetal.power("5/../9", "restart")
+    with pytest.raises(ValueError):
+        client.baremetal.get("nope")
+    with pytest.raises(ValueError):
+        client.baremetal.bmc_sensors("nope")
+    with pytest.raises(ValueError):
+        client.floating_ips.assign("baremetal", "nope", "1.2.3.4")
+    assert calls == []
+
+
+def test_baremetal_routes_take_number_or_uuid_as_given() -> None:
+    client, calls = make_client({})
+    client.baremetal.power(5, "restart")
+    client.baremetal.power(UUID.upper(), "stop")
+    client.baremetal.cancel_reinstall(UUID)
+    client.baremetal.attach_network(UUID, 73)
+    assert [c.url.path for c in calls] == [
+        "/baremetal/5/power/restart",
+        f"/baremetal/{UUID}/power/stop",
+        f"/baremetal/{UUID}/reinstall",
+        f"/baremetal/{UUID}/network",
+    ]
+
+
+def test_floating_ip_assign_baremetal_uuid_and_vps_unchanged() -> None:
+    client, calls = make_client({})
+    client.floating_ips.assign("baremetal", UUID.upper(), "1.2.3.4")
+    client.floating_ips.assign("baremetal", 5, "1.2.3.4")
+    client.floating_ips.assign("vps", "abc-123", "1.2.3.4")
+    assert [c.url.path for c in calls] == [
+        f"/floating_ips/assign/baremetal/{UUID}",
+        "/floating_ips/assign/baremetal/5",
+        "/floating_ips/assign/vps/abc-123",
+    ]
+
+
+def test_baremetal_get_old_and_new_api_shapes() -> None:
+    old = [{"project": {"id": 1}, "baremetals": [{"id": 9, "status": "active"}]}]
+    new_bms = [{"id": 9, "uuid": UUID, "status": "active"}, {"id": "10", "uuid": None}]
+    new = [{"project": {"id": 1}, "baremetals": new_bms}]
+    client, _ = make_client({"GET /projects/": old})
+    bm = client.baremetal.get("9")
+    assert bm.id == 9 and bm.uuid == ""
+    assert client.baremetal.get(9).id == 9
+    with pytest.raises(APIError) as exc:
+        client.baremetal.get(UUID)
+    assert exc.value.is_not_found()
+    client, _ = make_client({"GET /projects/": new})
+    assert client.baremetal.get("9").uuid == UUID
+    assert client.baremetal.get(UUID.upper()).id == 9
+    assert client.baremetal.get(10).id == "10" and client.baremetal.get(10).uuid == ""
+    assert client.baremetal.reinstall_status(UUID).status == "active"
+
+
+def test_bmc_sensors_with_uuid_sends_it_as_given() -> None:
+    sensors = {"temperatures": [], "fans": []}
+    client, calls = make_client({"POST /graphql": {"data": {"baremetal": {"sensors": sensors}}}})
+    client.baremetal.bmc_sensors(UUID.upper())
+    assert body(calls[0])["variables"] == {"id": UUID}

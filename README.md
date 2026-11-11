@@ -120,6 +120,17 @@ req = CreateBaremetalRequest(
 task = client.baremetal.deploy(project_id="proj-123", req=req)
 ```
 
+A server is named by its number or its uuid. Every `client.baremetal` method that takes `baremetal_id`
+(and `client.floating_ips.assign("baremetal", ...)`) accepts either; anything else raises `ValueError`
+before a request is sent. The `uuid` field of a `Baremetal` is empty on an API that does not send it yet.
+The fields that point at a server inside other objects (route next hop, BGP peer target, load balancer
+target, alert `target_id`) take the server **number** (`bm.id`), not the uuid.
+
+```python
+bm = client.baremetal.get(5)  # or client.baremetal.get(bm.uuid)
+client.baremetal.power(bm.uuid or bm.id, "restart")
+```
+
 ### Create a Load Balancer
 
 ```python
