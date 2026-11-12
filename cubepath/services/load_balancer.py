@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 from typing import TYPE_CHECKING, Any
 
+from cubepath.baremetal_ref import baremetal_target
 from cubepath.exceptions import APIError
 from cubepath.models.load_balancer import (
     AddTargetRequest,
@@ -85,7 +86,7 @@ class LoadBalancerService:
     def add_target(self, lb_uuid: str, listener_uuid: str, req: AddTargetRequest) -> LBTarget:
         data: dict[str, Any] = self._client.post(
             f"/loadbalancer/{lb_uuid}/listeners/{listener_uuid}/targets",
-            json=req.to_dict(),
+            json=_target_body(req),
         )
         return LBTarget.from_dict(data)
 
@@ -108,7 +109,7 @@ class LoadBalancerService:
         """Add up to 50 targets in one call, all or nothing."""
         data: dict[str, Any] = self._client.post(
             f"/loadbalancer/{lb_uuid}/listeners/{listener_uuid}/targets/batch",
-            json={"targets": [t.to_dict() for t in targets]},
+            json={"targets": [_target_body(t) for t in targets]},
         )
         return [LBTarget.from_dict(t) for t in data.get("targets", [])]
 
@@ -130,3 +131,10 @@ class LoadBalancerService:
 
     def delete_health_check(self, lb_uuid: str, listener_uuid: str) -> None:
         self._client.delete(f"/loadbalancer/{lb_uuid}/listeners/{listener_uuid}/health-check")
+
+
+def _target_body(req: AddTargetRequest) -> dict[str, Any]:
+    """The request body of a target; a baremetal target must be its uuid, sent in lower case."""
+    body = req.to_dict()
+    body["target_uuid"] = baremetal_target(req.target_type, req.target_uuid)
+    return body

@@ -69,9 +69,8 @@ class SSHKeyRef:
 
 @dataclass
 class Baremetal:
-    # ``id`` is the server number as the API sends it (an int today); ``uuid`` is empty on an API that does not
-    # send it yet. Either one is a valid reference for the ``client.baremetal`` methods.
-    id: str | int = ""
+    # ``id`` is the server uuid, the reference the ``client.baremetal`` methods take; ``uuid`` is the same value.
+    id: str = ""
     uuid: str = ""
     hostname: str = ""
     label: str = ""

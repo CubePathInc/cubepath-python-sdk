@@ -152,7 +152,7 @@ class CreateBGPPeerRequest:
     peer_type: str
     """ip, vps or baremetal."""
     peer_target: str
-    """An IP of the network, or the id of a VPS or baremetal attached to it."""
+    """An IP of the network, the id of a VPS or the uuid of a baremetal attached to it."""
     remote_asn: int
     max_prefix: int = 100
     description: str | None = None

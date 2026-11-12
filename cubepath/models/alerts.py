@@ -175,7 +175,7 @@ class CreateAlertRequest:
     target_type: str
     """vps, baremetal or availability_group."""
     target_id: str
-    """VPS id, baremetal id or availability group uuid."""
+    """VPS id, baremetal uuid or availability group uuid."""
     metric_type: str
     """cpu, ram, disk, network_in or network_out (baremetal: network only)."""
     operator: str

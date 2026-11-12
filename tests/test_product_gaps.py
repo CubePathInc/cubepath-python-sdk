@@ -133,33 +133,38 @@ def test_availability_groups() -> None:
     ]
 
 
+BM = "3f2a8c10-1b2c-4d3e-8f90-a1b2c3d4e5f6"
+
+
 def test_baremetal_actions() -> None:
     client, calls = make_client(
         {
             "GET /baremetal/models": {
                 "locations": [{"location_name": "eu-bcn-1", "models": [{"model_name": "m1", "stock_available": 2}]}]
             },
-            "GET /baremetal/9/kvm": {"url": "https://kvm", "username": "admin", "password": "pw"},
-            "GET /baremetal/os/9": [{"id": 1, "os_name": "debian-12", "disk_layouts": [{"id": 2, "name": "raid1"}]}],
+            f"GET /baremetal/{BM}/kvm": {"url": "https://kvm", "username": "admin", "password": "pw"},
+            f"GET /baremetal/os/{BM}": [
+                {"id": 1, "os_name": "debian-12", "disk_layouts": [{"id": 2, "name": "raid1"}]}
+            ],
         }
     )
     bm = client.baremetal
     assert bm.list_models()[0].models[0].stock_available == 2
-    assert bm.kvm("9").password == "pw"
-    assert bm.list_os("9")[0].disk_layouts[0].name == "raid1"
-    bm.configure_protection("9", False)
-    bm.move_to_project("9", 4)
-    bm.add_ssh_keys("9", [1])
-    bm.remove_ssh_key("9", 1)
-    bm.attach_network("9", 73)
-    bm.detach_network("9")
+    assert bm.kvm(BM).password == "pw"
+    assert bm.list_os(BM)[0].disk_layouts[0].name == "raid1"
+    bm.configure_protection(BM, False)
+    bm.move_to_project(BM, 4)
+    bm.add_ssh_keys(BM, [1])
+    bm.remove_ssh_key(BM, 1)
+    bm.attach_network(BM, 73)
+    bm.detach_network(BM)
     assert [(c.method, c.url.path) for c in calls[3:]] == [
-        ("POST", "/baremetal/9/protection"),
-        ("POST", "/baremetal/9/move-project"),
-        ("POST", "/baremetal/9/ssh-keys"),
-        ("DELETE", "/baremetal/9/ssh-keys/1"),
-        ("POST", "/baremetal/9/network"),
-        ("DELETE", "/baremetal/9/network"),
+        ("POST", f"/baremetal/{BM}/protection"),
+        ("POST", f"/baremetal/{BM}/move-project"),
+        ("POST", f"/baremetal/{BM}/ssh-keys"),
+        ("DELETE", f"/baremetal/{BM}/ssh-keys/1"),
+        ("POST", f"/baremetal/{BM}/network"),
+        ("DELETE", f"/baremetal/{BM}/network"),
     ]
     assert body(calls[3]) == {"enabled": False} and body(calls[5]) == [1]
 

@@ -27,8 +27,8 @@ class FloatingIPService:
     def release(self, address: str) -> None:
         self._client.post(f"/floating_ips/release/{address}")
 
-    def assign(self, resource_type: str, resource_id: str | int, address: str) -> None:
-        """Assign an owned IP to a server. For ``baremetal``, ``resource_id`` is the number or the uuid."""
+    def assign(self, resource_type: str, resource_id: str, address: str) -> None:
+        """Assign an owned IP to a server. For ``baremetal``, ``resource_id`` is the server uuid."""
         if resource_type == "baremetal":
             resource_id = baremetal_ref(resource_id)
         self._client.post(

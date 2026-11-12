@@ -120,15 +120,18 @@ req = CreateBaremetalRequest(
 task = client.baremetal.deploy(project_id="proj-123", req=req)
 ```
 
-A server is named by its number or its uuid. Every `client.baremetal` method that takes `baremetal_id`
-(and `client.floating_ips.assign("baremetal", ...)`) accepts either; anything else raises `ValueError`
-before a request is sent. The `uuid` field of a `Baremetal` is empty on an API that does not send it yet.
-The fields that point at a server inside other objects (route next hop, BGP peer target, load balancer
-target, alert `target_id`) take the server **number** (`bm.id`), not the uuid.
+A server is named by its uuid: `Baremetal.id` is the uuid and `Baremetal.uuid` carries the same value. Every
+`client.baremetal` method that takes `baremetal_id`, `client.floating_ips.assign("baremetal", ...)` and the
+fields that point at a server inside other objects (route next hop, BGP peer target, load balancer target, alert
+`target_id`, when their type is `baremetal`) take the uuid. Anything else, a server number included, raises
+`ValueError("baremetal reference must be a uuid ...")` before a request is sent.
+
+**Breaking change (unreleased):** the API no longer knows server numbers. Code that passed a number, or that read
+`bm.id` as a number, has to use the uuid (shown in the dashboard and returned in `bm.id`).
 
 ```python
-bm = client.baremetal.get(5)  # or client.baremetal.get(bm.uuid)
-client.baremetal.power(bm.uuid or bm.id, "restart")
+bm = client.baremetal.get("3f2a8c10-1b2c-4d3e-8f90-a1b2c3d4e5f6")
+client.baremetal.power(bm.id, "restart")
 ```
 
 ### Create a Load Balancer

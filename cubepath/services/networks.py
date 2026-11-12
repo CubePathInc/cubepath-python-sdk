@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 from typing import TYPE_CHECKING, Any
 
+from cubepath.baremetal_ref import baremetal_target
 from cubepath.models.networks import (
     BGPPeer,
     CreateBGPPeerRequest,
@@ -42,7 +43,9 @@ class NetworkService:
         return [NetworkRoute.from_dict(r) for r in data]
 
     def create_route(self, network_id: str, req: CreateNetworkRouteRequest) -> NetworkRoute:
-        data: dict[str, Any] = self._client.post(f"/networks/{network_id}/routes", json=req.to_dict())
+        body = req.to_dict()
+        body["next_hop_target"] = baremetal_target(req.next_hop_type, req.next_hop_target)
+        data: dict[str, Any] = self._client.post(f"/networks/{network_id}/routes", json=body)
         return NetworkRoute.from_dict(data)
 
     def delete_route(self, network_id: str, route_id: str) -> None:
@@ -59,7 +62,9 @@ class NetworkService:
 
     def create_bgp_peer(self, network_id: str, req: CreateBGPPeerRequest) -> BGPPeer:
         """Peer the network's router with a server of the network or an IP, to learn routes over BGP."""
-        data: dict[str, Any] = self._client.post(f"/networks/{network_id}/bgp-peers", json=req.to_dict())
+        body = req.to_dict()
+        body["peer_target"] = baremetal_target(req.peer_type, req.peer_target)
+        data: dict[str, Any] = self._client.post(f"/networks/{network_id}/bgp-peers", json=body)
         return BGPPeer.from_dict(data)
 
     def update_bgp_peer(self, network_id: str, peer_id: str, req: UpdateBGPPeerRequest) -> None:

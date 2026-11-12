@@ -37,7 +37,7 @@ class BaremetalService:
         data: list[dict[str, Any]] = self._client.get("/projects/")
         return [ProjectResponse.from_dict(p) for p in data]
 
-    def get(self, baremetal_id: str | int) -> Baremetal:
+    def get(self, baremetal_id: str) -> Baremetal:
         baremetal_id = baremetal_ref(baremetal_id)
         projects: list[dict[str, Any]] = self._client.get("/projects/")
         for proj in projects:
@@ -46,24 +46,24 @@ class BaremetalService:
                     return Baremetal.from_dict(bm)
         raise APIError(404, "Not Found", f"baremetal {baremetal_id} not found")
 
-    def update(self, baremetal_id: str | int, req: UpdateBaremetalRequest) -> None:
+    def update(self, baremetal_id: str, req: UpdateBaremetalRequest) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.patch(f"/baremetal/update/{baremetal_id}", json=req.to_dict())
 
-    def power(self, baremetal_id: str | int, action: str) -> None:
+    def power(self, baremetal_id: str, action: str) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.post(f"/baremetal/{baremetal_id}/power/{action}")
 
-    def rescue(self, baremetal_id: str | int) -> RescueResponse:
+    def rescue(self, baremetal_id: str) -> RescueResponse:
         baremetal_id = baremetal_ref(baremetal_id)
         data: dict[str, Any] = self._client.post(f"/baremetal/{baremetal_id}/rescue")
         return RescueResponse.from_dict(data)
 
-    def reset_bmc(self, baremetal_id: str | int) -> None:
+    def reset_bmc(self, baremetal_id: str) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.post(f"/baremetal/{baremetal_id}/reset-bmc")
 
-    def bmc_sensors(self, baremetal_id: str | int) -> BMCSensors:
+    def bmc_sensors(self, baremetal_id: str) -> BMCSensors:
         """Temperatures and fan speeds from the last BMC poll, served through GraphQL."""
         baremetal_id = baremetal_ref(baremetal_id)
         data = self._client.graphql(
@@ -83,16 +83,16 @@ class BaremetalService:
             }
         )
 
-    def ipmi_session(self, baremetal_id: str | int) -> IPMISession:
+    def ipmi_session(self, baremetal_id: str) -> IPMISession:
         baremetal_id = baremetal_ref(baremetal_id)
         data: dict[str, Any] = self._client.post(f"/ipmi-proxy/create-session/{baremetal_id}")
         return IPMISession.from_dict(data)
 
-    def reinstall(self, baremetal_id: str | int, req: ReinstallBaremetalRequest) -> None:
+    def reinstall(self, baremetal_id: str, req: ReinstallBaremetalRequest) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.post(f"/baremetal/{baremetal_id}/reinstall", json=req.to_dict())
 
-    def reinstall_status(self, baremetal_id: str | int) -> ReinstallStatus:
+    def reinstall_status(self, baremetal_id: str) -> ReinstallStatus:
         """Whether an OS reinstallation is running.
 
         There is no dedicated endpoint any more: a server is reinstalling while its status is
@@ -101,16 +101,16 @@ class BaremetalService:
         bm = self.get(baremetal_id)
         return ReinstallStatus(is_reinstalling=bm.status == "deploying", status=bm.status)
 
-    def cancel_reinstall(self, baremetal_id: str | int) -> None:
+    def cancel_reinstall(self, baremetal_id: str) -> None:
         """Cancel a pending or running OS reinstallation."""
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.delete(f"/baremetal/{baremetal_id}/reinstall")
 
-    def monitoring_enable(self, baremetal_id: str | int) -> None:
+    def monitoring_enable(self, baremetal_id: str) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.put(f"/baremetal/{baremetal_id}/monitoring", params={"enable": "true"})
 
-    def monitoring_disable(self, baremetal_id: str | int) -> None:
+    def monitoring_disable(self, baremetal_id: str) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.put(f"/baremetal/{baremetal_id}/monitoring", params={"enable": "false"})
 
@@ -119,41 +119,41 @@ class BaremetalService:
         data: dict[str, Any] = self._client.get("/baremetal/models")
         return [BaremetalModelLocation.from_dict(loc) for loc in data.get("locations", [])]
 
-    def list_os(self, baremetal_id: str | int) -> builtins.list[BaremetalOSOption]:
+    def list_os(self, baremetal_id: str) -> builtins.list[BaremetalOSOption]:
         """Operating systems and disk layouts that can be installed on the server."""
         baremetal_id = baremetal_ref(baremetal_id)
         data: list[dict[str, Any]] = self._client.get(f"/baremetal/os/{baremetal_id}")
         return [BaremetalOSOption.from_dict(o) for o in data]
 
-    def kvm(self, baremetal_id: str | int) -> BaremetalKVM:
+    def kvm(self, baremetal_id: str) -> BaremetalKVM:
         """KVM-over-IP console URL and credentials, for servers that have one."""
         baremetal_id = baremetal_ref(baremetal_id)
         data: dict[str, Any] = self._client.get(f"/baremetal/{baremetal_id}/kvm")
         return BaremetalKVM.from_dict(data)
 
-    def configure_protection(self, baremetal_id: str | int, enabled: bool) -> None:
+    def configure_protection(self, baremetal_id: str, enabled: bool) -> None:
         """A protected server cannot be reinstalled."""
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.post(f"/baremetal/{baremetal_id}/protection", json={"enabled": enabled})
 
-    def move_to_project(self, baremetal_id: str | int, project_id: int) -> None:
+    def move_to_project(self, baremetal_id: str, project_id: int) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.post(f"/baremetal/{baremetal_id}/move-project", json={"project_id": project_id})
 
-    def add_ssh_keys(self, baremetal_id: str | int, ssh_key_ids: builtins.list[int]) -> None:
+    def add_ssh_keys(self, baremetal_id: str, ssh_key_ids: builtins.list[int]) -> None:
         """Authorise more SSH keys on the server."""
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.post(f"/baremetal/{baremetal_id}/ssh-keys", json=ssh_key_ids)
 
-    def remove_ssh_key(self, baremetal_id: str | int, ssh_key_id: int | str) -> None:
+    def remove_ssh_key(self, baremetal_id: str, ssh_key_id: int | str) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.delete(f"/baremetal/{baremetal_id}/ssh-keys/{ssh_key_id}")
 
-    def attach_network(self, baremetal_id: str | int, network_id: int) -> None:
+    def attach_network(self, baremetal_id: str, network_id: int) -> None:
         """Attach a private network to the server."""
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.post(f"/baremetal/{baremetal_id}/network", json={"network_id": network_id})
 
-    def detach_network(self, baremetal_id: str | int) -> None:
+    def detach_network(self, baremetal_id: str) -> None:
         baremetal_id = baremetal_ref(baremetal_id)
         self._client.delete(f"/baremetal/{baremetal_id}/network")

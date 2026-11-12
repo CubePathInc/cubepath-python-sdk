@@ -3,6 +3,7 @@ from __future__ import annotations
 import builtins
 from typing import TYPE_CHECKING, Any
 
+from cubepath.baremetal_ref import baremetal_target
 from cubepath.models.alerts import (
     Alert,
     AlertHistoryEntry,
@@ -61,11 +62,16 @@ class AlertService:
         return Alert.from_dict(data)
 
     def create(self, req: CreateAlertRequest) -> Alert:
-        data: dict[str, Any] = self._client.post("/triggers/", json=req.to_dict())
+        body = req.to_dict()
+        body["target_id"] = baremetal_target(req.target_type, req.target_id)
+        data: dict[str, Any] = self._client.post("/triggers/", json=body)
         return Alert.from_dict(data)
 
     def update(self, alert_id: str, req: UpdateAlertRequest) -> Alert:
-        data: dict[str, Any] = self._client.put(f"/triggers/{alert_id}", json=req.to_dict())
+        body = req.to_dict()
+        if req.target_id is not None:
+            body["target_id"] = baremetal_target(req.target_type, req.target_id)
+        data: dict[str, Any] = self._client.put(f"/triggers/{alert_id}", json=body)
         return Alert.from_dict(data)
 
     def delete(self, alert_id: str) -> None:
