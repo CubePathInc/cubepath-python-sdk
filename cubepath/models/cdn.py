@@ -41,7 +41,7 @@ class CDNOrigin:
     health_check_interval: int = 10
     health_check_threshold: int = 3
     health_status: str = ""
-    """healthy, unhealthy or unknown. An origin with health checks disabled is "unknown" (not checked)."""
+    """healthy, unhealthy or unknown. "unknown" also when no origin of the zone has its check on (not checked): the nodes check every origin of a zone once one has it on."""
     health_detail: str | None = None
     """Why the origin is down."""
     health_changed_at: str | None = None
