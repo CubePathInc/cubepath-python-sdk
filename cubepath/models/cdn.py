@@ -34,7 +34,18 @@ class CDNOrigin:
     is_backup: bool = False
     health_check_enabled: bool = False
     health_check_path: str = ""
+    health_check_type: str = "tcp"
+    """"tcp" or "http". The path, method and expected status only apply to "http"."""
+    health_check_method: str = "GET"
+    health_check_expected_status: str = "2xx 3xx"
+    health_check_interval: int = 10
+    health_check_threshold: int = 3
     health_status: str = ""
+    """healthy, unhealthy or unknown. An origin with health checks disabled is "unknown" (not checked)."""
+    health_detail: str | None = None
+    """Why the origin is down."""
+    health_changed_at: str | None = None
+    """ISO 8601 UTC time of the last health status change."""
     verify_ssl: bool = False
     host_header: str = ""
     base_path: str = ""
@@ -223,6 +234,18 @@ class CreateCDNOriginRequest:
     is_backup: bool = False
     health_check_enabled: bool = False
     health_check_path: str = ""
+    """Only used when health_check_type is "http" (the API defaults it to "/")."""
+    health_check_type: str = ""
+    """"tcp" (default) or "http". The health check fields below are omitted when unset so the API
+    defaults apply."""
+    health_check_method: str = ""
+    """"GET" (default) or "HEAD"."""
+    health_check_expected_status: str = ""
+    """1 to 8 statuses or classes separated by spaces, such as "200" or "2xx 3xx" (default)."""
+    health_check_interval: int | None = None
+    """Seconds, 5 to 300 (default 10)."""
+    health_check_threshold: int | None = None
+    """Checks that flip the status, 1 to 10 (default 3)."""
     verify_ssl: bool = False
     enabled: bool = True
     origin_url: str = ""
@@ -263,6 +286,16 @@ class CreateCDNOriginRequest:
             d["protocol"] = self.protocol
         if self.health_check_path:
             d["health_check_path"] = self.health_check_path
+        if self.health_check_type:
+            d["health_check_type"] = self.health_check_type
+        if self.health_check_method:
+            d["health_check_method"] = self.health_check_method
+        if self.health_check_expected_status:
+            d["health_check_expected_status"] = self.health_check_expected_status
+        if self.health_check_interval is not None:
+            d["health_check_interval"] = self.health_check_interval
+        if self.health_check_threshold is not None:
+            d["health_check_threshold"] = self.health_check_threshold
         if self.host_header:
             d["host_header"] = self.host_header
         if self.base_path:
@@ -282,6 +315,11 @@ class UpdateCDNOriginRequest:
     base_path: str = ""
     health_check_enabled: bool | None = None
     health_check_path: str = ""
+    health_check_type: str = ""
+    health_check_method: str = ""
+    health_check_expected_status: str = ""
+    health_check_interval: int | None = None
+    health_check_threshold: int | None = None
     verify_ssl: bool | None = None
     enabled: bool | None = None
 
@@ -307,6 +345,16 @@ class UpdateCDNOriginRequest:
             d["health_check_enabled"] = self.health_check_enabled
         if self.health_check_path:
             d["health_check_path"] = self.health_check_path
+        if self.health_check_type:
+            d["health_check_type"] = self.health_check_type
+        if self.health_check_method:
+            d["health_check_method"] = self.health_check_method
+        if self.health_check_expected_status:
+            d["health_check_expected_status"] = self.health_check_expected_status
+        if self.health_check_interval is not None:
+            d["health_check_interval"] = self.health_check_interval
+        if self.health_check_threshold is not None:
+            d["health_check_threshold"] = self.health_check_threshold
         if self.verify_ssl is not None:
             d["verify_ssl"] = self.verify_ssl
         if self.enabled is not None:

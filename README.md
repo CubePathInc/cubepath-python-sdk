@@ -174,6 +174,22 @@ client.cdn.create_origin(zone.uuid, CreateCDNOriginRequest(
     priority=1,
     health_check_path="/health",
 ))
+
+# HTTP health check: GET /healthz every 15 s, down after 2 failures unless it answers 200 or 204.
+# Omitted fields keep the API defaults (tcp, GET, "2xx 3xx", 10 s, 3). health_status "unknown"
+# means "not checked"; origin.health_detail and origin.health_changed_at say why and since when.
+client.cdn.create_origin(zone.uuid, CreateCDNOriginRequest(
+    name="api",
+    address="api.example.com",
+    weight=100,
+    priority=1,
+    health_check_enabled=True,
+    health_check_type="http",
+    health_check_path="/healthz",
+    health_check_expected_status="200 204",
+    health_check_interval=15,
+    health_check_threshold=2,
+))
 ```
 
 ### Object Storage
