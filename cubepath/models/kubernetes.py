@@ -48,7 +48,12 @@ class KubernetesPlan:
     cpu: int = 0
     ram: int = 0
     storage: int = 0
+    location_id: int | None = None
     price_per_hour: str = ""
+    effective_price_per_hour: float | None = None
+    """Hourly price with the active discount; None when there is no discount. price_per_hour stays the list price."""
+    discount_percent: float | None = None
+    discount_label: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> KubernetesPlan:

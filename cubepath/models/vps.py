@@ -40,6 +40,10 @@ class VPSPlan:
     storage: int = 0
     bandwidth: int = 0
     price_per_hour: str = ""
+    effective_price_per_hour: float | None = None
+    """Hourly price with the active discount; None when there is no discount. price_per_hour stays the list price."""
+    discount_percent: float | None = None
+    discount_label: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VPSPlan:
@@ -363,6 +367,10 @@ class VPSPlanOption:
     bandwidth: int = 0
     """TB per month."""
     price_per_hour: float = 0.0
+    effective_price_per_hour: float | None = None
+    """Hourly price with the active discount; None when there is no discount. price_per_hour stays the list price."""
+    discount_percent: float | None = None
+    discount_label: str | None = None
     status: int = 0
 
     @classmethod
