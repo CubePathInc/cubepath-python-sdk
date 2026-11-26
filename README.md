@@ -5,8 +5,10 @@ Official Python SDK for the [CubePath Cloud API](https://api.cubepath.com).
 ## Installation
 
 ```bash
-pip install cubepath
+pip install cubepath-sdk
 ```
+
+The package is published on PyPI as `cubepath-sdk` and imported as `cubepath`.
 
 ## Quick Start
 
