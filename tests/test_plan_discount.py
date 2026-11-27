@@ -6,8 +6,13 @@ from cubepath.models.vps import VPSPlan, VPSPlanOption
 
 def test_vps_plan_discount_fields():
     p = VPSPlanOption.from_dict(
-        {"plan_name": "gp.nano", "price_per_hour": 0.07639, "effective_price_per_hour": 0.03819,
-         "discount_percent": 50, "discount_label": "Launch"}
+        {
+            "plan_name": "gp.nano",
+            "price_per_hour": 0.07639,
+            "effective_price_per_hour": 0.03819,
+            "discount_percent": 50,
+            "discount_label": "Launch",
+        }
     )
     assert p.price_per_hour == 0.07639
     assert p.effective_price_per_hour == 0.03819
